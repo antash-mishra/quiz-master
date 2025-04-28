@@ -268,11 +268,11 @@ const QuizResponses: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Quiz Responses</h2>
+    <div className="w-full max-w-4xl mx-auto px-4 py-4 md:py-6">
+      <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Quiz Responses</h2>
       
       {loading ? (
-        <div className="text-center p-8">
+        <div className="text-center p-4 md:p-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
           <p className="mt-2 text-gray-600">Loading quiz data...</p>
         </div>
@@ -281,11 +281,11 @@ const QuizResponses: React.FC = () => {
           {error}
         </div>
       ) : quizzes.length === 0 ? (
-        <div className="text-center text-gray-600">
+        <div className="text-center text-gray-600 p-4 md:p-8">
           No quizzes available yet.
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {quizzes.map(quiz => {
             const quizResponses = getResponsesByQuiz(quiz.id);
             const averageScore = calculateAverageScore(quiz.id);
@@ -293,69 +293,82 @@ const QuizResponses: React.FC = () => {
             return (
               <div key={quiz.id} className="bg-white rounded-2xl shadow-lg overflow-hidden">
                 <div 
-                  className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="p-4 md:p-6 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => toggleQuizExpansion(quiz.id)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <ClipboardList className="w-6 h-6 text-blue-600" />
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-0">
+                      <div className="p-2 md:p-3 bg-blue-50 rounded-lg">
+                        <ClipboardList className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-gray-800">{quiz.title}</h3>
-                        <p className="text-gray-600">{quizResponses.length} responses</p>
+                        <h3 className="text-base md:text-xl font-semibold text-gray-800">{quiz.title}</h3>
+                        <p className="text-sm text-gray-600">{quizResponses.length} responses</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between md:justify-end gap-3 md:gap-4">
                       <div className="text-right">
-                        <p className="text-sm text-gray-600">Average Score</p>
-                        <p className="font-semibold text-lg">{averageScore.toFixed(1)}%</p>
+                        <p className="text-xs md:text-sm text-gray-600">Average Score</p>
+                        <p className="font-semibold text-base md:text-lg">{averageScore.toFixed(1)}%</p>
                       </div>
                       <button
                         onClick={(e) => deleteQuiz(quiz.id, e)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                         title="Delete Quiz"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
                       {expandedQuiz === quiz.id ? (
-                        <ChevronUp className="w-6 h-6 text-gray-400" />
+                        <ChevronUp className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
                       ) : (
-                        <ChevronDown className="w-6 h-6 text-gray-400" />
+                        <ChevronDown className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
                       )}
                     </div>
                   </div>
                 </div>
                 
-                {expandedQuiz === quiz.id && !selectedResponse && quizResponses.length > 0 && (
-                  <div className="border-t border-gray-100">
-                    <div className="p-6">
+                {expandedQuiz === quiz.id && (
+                  <div className="p-4 md:p-6 border-t border-gray-100">
+                    {quizResponses.length === 0 ? (
+                      <p className="text-center text-gray-600 py-4">No responses for this quiz yet.</p>
+                    ) : selectedResponse ? (
+                      renderResponseDetails()
+                    ) : (
                       <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="text-left border-b border-gray-200">
-                              <th className="pb-3 font-semibold text-gray-600">User</th>
-                              <th className="pb-3 font-semibold text-gray-600">Date</th>
-                              <th className="pb-3 font-semibold text-gray-600">Score</th>
-                              <th className="pb-3 font-semibold text-gray-600">Actions</th>
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">User</th>
+                              <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                              <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                              <th className="px-2 md:px-4 py-3 text-right text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                           </thead>
-                          <tbody>
-                            {quizResponses.map((response, index) => (
-                              <tr key={index} className="border-b border-gray-100">
-                                <td className="py-4">User {response.userId.slice(0, 8)}</td>
-                                <td className="py-4">{formatDate(response.timestamp)}</td>
-                                <td className="py-4">
-                                  <span className={`font-medium ${getScoreColor(response.score)}`}>
-                                    {response.score}%
-                                  </span>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {quizResponses.map(response => (
+                              <tr 
+                                key={`${response.quizId}_${response.userId}_${response.timestamp}`}
+                                className="hover:bg-gray-50"
+                              >
+                                <td className="px-2 md:px-4 py-3 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {response.userId.substring(0, 6)}...
+                                  </div>
                                 </td>
-                                <td className="py-4">
+                                <td className="px-2 md:px-4 py-3 whitespace-nowrap">
+                                  <div className={`text-sm font-medium ${getScoreColor(response.score)}`}>
+                                    {response.score}%
+                                  </div>
+                                </td>
+                                <td className="px-2 md:px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                  {formatDate(response.timestamp)}
+                                </td>
+                                <td className="px-2 md:px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                                   <button
                                     onClick={() => viewResponseDetails(response)}
-                                    className="text-blue-600 hover:text-blue-700 font-medium"
+                                    className="text-blue-600 hover:text-blue-900"
                                   >
-                                    View Details
+                                    Details
                                   </button>
                                 </td>
                               </tr>
@@ -363,11 +376,9 @@ const QuizResponses: React.FC = () => {
                           </tbody>
                         </table>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
-                
-                {expandedQuiz === quiz.id && selectedResponse && renderResponseDetails()}
               </div>
             );
           })}

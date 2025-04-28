@@ -156,9 +156,9 @@ const QuizBuilder: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-        <h2 className="text-2xl font-bold mb-6">Create New Quiz</h2>
+    <div className="max-w-4xl mx-auto px-4 py-4 md:py-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-6 md:mb-8">
+        <h2 className="text-xl md:text-2xl font-bold mb-6">Create New Quiz</h2>
         
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
@@ -176,7 +176,7 @@ const QuizBuilder: React.FC = () => {
               name="title"
               value={quiz.title}
               onChange={handleQuizChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="Enter quiz title"
             />
           </div>
@@ -189,7 +189,7 @@ const QuizBuilder: React.FC = () => {
               name="description"
               value={quiz.description}
               onChange={handleQuizChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="Enter quiz description"
               rows={3}
             />
@@ -197,8 +197,8 @@ const QuizBuilder: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-        <h3 className="text-xl font-bold mb-6">Add New Question</h3>
+      <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-6 md:mb-8">
+        <h3 className="text-lg md:text-xl font-bold mb-6">Add New Question</h3>
         
         <div className="space-y-6">
           <div>
@@ -210,7 +210,7 @@ const QuizBuilder: React.FC = () => {
               name="text"
               value={currentQuestion.text}
               onChange={handleQuestionChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="Enter question text"
             />
           </div>
@@ -223,7 +223,7 @@ const QuizBuilder: React.FC = () => {
               name="type"
               value={currentQuestion.type}
               onChange={handleQuestionChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="multiple-choice">Multiple Choice</option>
               <option value="true-false">True/False</option>
@@ -237,60 +237,72 @@ const QuizBuilder: React.FC = () => {
                 Options
               </label>
               {currentQuestion.options.map((option, index) => (
-                <div key={option.id} className="flex gap-4">
+                <div key={option.id} className="flex gap-2 md:gap-4">
                   <input
                     type="text"
                     value={option.text}
                     onChange={(e) => handleOptionChange(index, e.target.value)}
-                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder={`Option ${index + 1}`}
                   />
                   <button
                     onClick={() => removeOption(index)}
-                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                    type="button"
+                    className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    disabled={currentQuestion.options.length <= 2}
                   >
                     Remove
                   </button>
-                  <input
-                    type="radio"
-                    name="correctAnswer"
-                    checked={currentQuestion.correctAnswerId === option.id}
-                    onChange={() => setCurrentQuestion({ ...currentQuestion, correctAnswerId: option.id })}
-                    className="w-6 h-6 text-blue-600"
-                  />
                 </div>
               ))}
-              <button
-                onClick={addOption}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-                type="button"
-              >
-                + Add Option
-              </button>
+
+              <div className="mt-2 md:flex md:gap-4 space-y-3 md:space-y-0">
+                <button
+                  onClick={addOption}
+                  className="w-full md:w-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                >
+                  Add Option
+                </button>
+
+                <div className="w-full md:flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Correct Answer
+                  </label>
+                  <select
+                    value={currentQuestion.correctAnswerId}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswerId: e.target.value })}
+                    className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select correct answer</option>
+                    {currentQuestion.options.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.text || `Option ${currentQuestion.options.indexOf(option) + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           )}
 
           {currentQuestion.type === 'subjective' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sample Answer (Optional)
+                Sample Answer (optional)
               </label>
               <textarea
                 name="sampleAnswer"
                 value={currentQuestion.sampleAnswer || ''}
-                onChange={handleQuestionChange}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter a sample answer"
+                onChange={(e) => setCurrentQuestion({ ...currentQuestion, sampleAnswer: e.target.value })}
+                className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 rows={3}
+                placeholder="Enter a sample answer"
               />
             </div>
           )}
 
           <button
             onClick={addQuestion}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            type="button"
+            className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
           >
             Add Question
           </button>
@@ -298,38 +310,61 @@ const QuizBuilder: React.FC = () => {
       </div>
 
       {quiz.questions.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <h3 className="text-xl font-bold mb-6">Added Questions</h3>
+        <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-8">
+          <h3 className="text-lg md:text-xl font-bold mb-6">Quiz Questions ({quiz.questions.length})</h3>
+          
           <div className="space-y-4">
-            {quiz.questions.map((q, index) => (
-              <div key={q.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">{q.text}</p>
-                  <p className="text-sm text-gray-500">Type: {q.type}</p>
+            {quiz.questions.map((question, index) => (
+              <div key={question.id} className="p-4 border border-gray-200 rounded-lg">
+                <div className="flex justify-between items-start">
+                  <h4 className="text-base md:text-lg font-medium text-gray-800 mb-2">
+                    {index + 1}. {question.text}
+                  </h4>
+                  <button
+                    onClick={() => removeQuestion(index)}
+                    className="ml-2 p-1 text-red-600 hover:bg-red-50 rounded-lg"
+                    aria-label="Remove question"
+                  >
+                    Remove
+                  </button>
                 </div>
-                <button
-                  onClick={() => removeQuestion(index)}
-                  className="text-red-600 hover:text-red-700"
-                  type="button"
-                >
-                  Remove
-                </button>
+                
+                <p className="text-sm text-gray-600 mb-2">
+                  Type: {question.type}
+                </p>
+                
+                {question.type !== 'subjective' && (
+                  <div className="mt-2">
+                    <p className="text-sm font-medium text-gray-700">Options:</p>
+                    <ul className="mt-1 pl-5 list-disc text-sm text-gray-600">
+                      {question.options.map((option) => (
+                        <li key={option.id} className={option.id === question.correctAnswerId ? 'font-semibold text-green-600' : ''}>
+                          {option.text} {option.id === question.correctAnswerId && '(Correct)'}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {question.type === 'subjective' && question.sampleAnswer && (
+                  <div className="mt-2">
+                    <p className="text-sm font-medium text-gray-700">Sample Answer:</p>
+                    <p className="text-sm text-gray-600 mt-1 italic">{question.sampleAnswer}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
+          
+          <button
+            onClick={saveQuizToDatabase}
+            disabled={isLoading}
+            className="w-full mt-6 py-3 px-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors disabled:bg-green-400"
+          >
+            {isLoading ? 'Saving...' : 'Save Quiz'}
+          </button>
         </div>
       )}
-
-      <button
-        onClick={saveQuizToDatabase}
-        disabled={isLoading}
-        className={`w-full py-4 bg-green-600 text-white rounded-lg transition-colors font-medium ${
-          isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
-        }`}
-        type="button"
-      >
-        {isLoading ? 'Saving Quiz...' : 'Save Quiz'}
-      </button>
     </div>
   );
 };

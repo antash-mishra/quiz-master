@@ -98,8 +98,8 @@ const Quiz: React.FC<QuizProps> = ({ studentId, studentName, quizId }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-2xl">
-        <div className="mb-8">
+      <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 w-full max-w-2xl">
+        <div className="mb-6 md:mb-8">
           <p className="text-sm text-gray-600">Question {currentQuestionIndex + 1} of {questions.length}</p>
           <div className="w-full h-2 bg-gray-200 rounded-full mt-2">
             <div
@@ -109,7 +109,7 @@ const Quiz: React.FC<QuizProps> = ({ studentId, studentName, quizId }) => {
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        <h2 className="text-lg md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">
           {currentQuestion.text}
         </h2>
 
@@ -117,7 +117,7 @@ const Quiz: React.FC<QuizProps> = ({ studentId, studentName, quizId }) => {
           {(currentQuestion.type === 'multiple_choice' || currentQuestion.type === 'true_false') ? (
             <div className="space-y-3">
               {currentQuestion.options.map((option) => (
-                <div key={option.id} className="flex items-center">
+                <div key={option.id} className="flex items-start md:items-center p-2">
                   <input
                     type="radio"
                     id={option.id}
@@ -125,9 +125,14 @@ const Quiz: React.FC<QuizProps> = ({ studentId, studentName, quizId }) => {
                     value={option.id}
                     checked={answer === option.id}
                     onChange={(e) => setAnswer(e.target.value)}
-                    className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                    className="mr-3 h-4 w-4 mt-1 md:mt-0 text-blue-600 focus:ring-blue-500"
                   />
-                  <label htmlFor={option.id} className="text-gray-700">{option.text}</label>
+                  <label 
+                    htmlFor={option.id} 
+                    className="text-gray-700 flex-1 cursor-pointer"
+                  >
+                    {option.text}
+                  </label>
                 </div>
               ))}
             </div>
@@ -139,13 +144,13 @@ const Quiz: React.FC<QuizProps> = ({ studentId, studentName, quizId }) => {
               >
                 Your Answer:
               </label>
-              <input
-                type="text"
+              <textarea
                 id="answer"
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Type your answer here"
+                rows={4}
               />
             </div>
           )}
@@ -156,7 +161,7 @@ const Quiz: React.FC<QuizProps> = ({ studentId, studentName, quizId }) => {
 
           <button
             onClick={handleSubmitAnswer}
-            className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors mt-4"
           >
             {currentQuestionIndex === questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
           </button>
