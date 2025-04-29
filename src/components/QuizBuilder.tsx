@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Quiz, Question, QuestionType } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { saveQuiz } from '../lib/db';
+import SpeechQuizBuilder from './SpeechQuizBuilder';
 
 const QuizBuilder: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +26,8 @@ const QuizBuilder: React.FC = () => {
 
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [useSpeechInput, setUseSpeechInput] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const handleQuizChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setQuiz({ ...quiz, [e.target.name]: e.target.value });
@@ -155,159 +158,195 @@ const QuizBuilder: React.FC = () => {
     }
   };
 
+  const handleSpeechQuizData = (quizData: Quiz) => {
+    // Merge speech-generated quiz data with existing quiz
+    setQuiz({
+      ...quiz,
+      title: quizData.title || quiz.title,
+      description: quizData.description || quiz.description,
+      questions: [...quiz.questions, ...quizData.questions]
+    });
+    
+    setUseSpeechInput(false);
+    setError('');
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-4 md:py-6">
-      <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-6 md:mb-8">
-        <h2 className="text-xl md:text-2xl font-bold mb-6">Create New Quiz</h2>
-        
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
-            {error}
-          </div>
-        )}
-        
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quiz Title
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={quiz.title}
-              onChange={handleQuizChange}
-              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter quiz title"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={quiz.description}
-              onChange={handleQuizChange}
-              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter quiz description"
-              rows={3}
-            />
-          </div>
-        </div>
+      {/* Speech input toggle */}
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={() => setUseSpeechInput(!useSpeechInput)}
+          className="flex items-center gap-2 py-2 px-4 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+          </svg>
+          {useSpeechInput ? 'Switch to Manual Input' : 'Use Voice Input'}
+        </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-6 md:mb-8">
-        <h3 className="text-lg md:text-xl font-bold mb-6">Add New Question</h3>
-        
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Question Text
-            </label>
-            <input
-              type="text"
-              name="text"
-              value={currentQuestion.text}
-              onChange={handleQuestionChange}
-              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter question text"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Question Type
-            </label>
-            <select
-              name="type"
-              value={currentQuestion.type}
-              onChange={handleQuestionChange}
-              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="multiple-choice">Multiple Choice</option>
-              <option value="true-false">True/False</option>
-              <option value="subjective">Subjective</option>
-            </select>
-          </div>
-
-          {currentQuestion.type !== 'subjective' && (
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Options
-              </label>
-              {currentQuestion.options.map((option, index) => (
-                <div key={option.id} className="flex gap-2 md:gap-4">
-                  <input
-                    type="text"
-                    value={option.text}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    className="flex-1 p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder={`Option ${index + 1}`}
-                  />
-                  <button
-                    onClick={() => removeOption(index)}
-                    className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                    disabled={currentQuestion.options.length <= 2}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-
-              <div className="mt-2 md:flex md:gap-4 space-y-3 md:space-y-0">
-                <button
-                  onClick={addOption}
-                  className="w-full md:w-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
-                >
-                  Add Option
-                </button>
-
-                <div className="w-full md:flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Correct Answer
-                  </label>
-                  <select
-                    value={currentQuestion.correctAnswerId}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswerId: e.target.value })}
-                    className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select correct answer</option>
-                    {currentQuestion.options.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.text || `Option ${currentQuestion.options.indexOf(option) + 1}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+      {useSpeechInput ? (
+        <SpeechQuizBuilder
+          onQuizData={handleSpeechQuizData}
+          isListening={isListening}
+          setIsListening={setIsListening}
+        />
+      ) : (
+        <>
+          <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-6">Create New Quiz</h2>
+            
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quiz Title
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={quiz.title}
+                  onChange={handleQuizChange}
+                  className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter quiz title"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={quiz.description}
+                  onChange={handleQuizChange}
+                  className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter quiz description"
+                  rows={3}
+                />
               </div>
             </div>
-          )}
+          </div>
 
-          {currentQuestion.type === 'subjective' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sample Answer (optional)
-              </label>
-              <textarea
-                name="sampleAnswer"
-                value={currentQuestion.sampleAnswer || ''}
-                onChange={(e) => setCurrentQuestion({ ...currentQuestion, sampleAnswer: e.target.value })}
-                className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="Enter a sample answer"
-              />
+          <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-6 md:mb-8">
+            <h3 className="text-lg md:text-xl font-bold mb-6">Add New Question</h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Question Text
+                </label>
+                <input
+                  type="text"
+                  name="text"
+                  value={currentQuestion.text}
+                  onChange={handleQuestionChange}
+                  className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter question text"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Question Type
+                </label>
+                <select
+                  name="type"
+                  value={currentQuestion.type}
+                  onChange={handleQuestionChange}
+                  className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="multiple-choice">Multiple Choice</option>
+                  <option value="true-false">True/False</option>
+                  <option value="subjective">Subjective</option>
+                </select>
+              </div>
+
+              {currentQuestion.type !== 'subjective' && (
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Options
+                  </label>
+                  {currentQuestion.options.map((option, index) => (
+                    <div key={option.id} className="flex gap-2 md:gap-4">
+                      <input
+                        type="text"
+                        value={option.text}
+                        onChange={(e) => handleOptionChange(index, e.target.value)}
+                        className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder={`Option ${index + 1}`}
+                      />
+                      <button
+                        onClick={() => removeOption(index)}
+                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        disabled={currentQuestion.options.length <= 2}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+
+                  <div className="mt-2 md:flex md:gap-4 space-y-3 md:space-y-0">
+                    <button
+                      onClick={addOption}
+                      className="w-full md:w-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                    >
+                      Add Option
+                    </button>
+
+                    <div className="w-full md:flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Correct Answer
+                      </label>
+                      <select
+                        value={currentQuestion.correctAnswerId}
+                        onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswerId: e.target.value })}
+                        className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select correct answer</option>
+                        {currentQuestion.options.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.text || `Option ${currentQuestion.options.indexOf(option) + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentQuestion.type === 'subjective' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sample Answer (optional)
+                  </label>
+                  <textarea
+                    name="sampleAnswer"
+                    value={currentQuestion.sampleAnswer || ''}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, sampleAnswer: e.target.value })}
+                    className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Enter a sample answer"
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={addQuestion}
+                className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              >
+                Add Question
+              </button>
             </div>
-          )}
-
-          <button
-            onClick={addQuestion}
-            className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-          >
-            Add Question
-          </button>
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {quiz.questions.length > 0 && (
         <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-8">
