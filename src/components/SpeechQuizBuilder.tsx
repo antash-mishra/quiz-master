@@ -19,6 +19,8 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
   const [provider, setProvider] = useState<'openai' | 'anthropic' | 'gemini'>('openai');
   const [jsonOutput, setJsonOutput] = useState<string>('');
   const [showJsonEditor, setShowJsonEditor] = useState(false);
+  const [inputMode, setInputMode] = useState<'quiz' | 'question'>('quiz');
+  const [quizMeta, setQuizMeta] = useState({ title: '', description: '' });
   const recognitionRef = useRef<any>(null);
 
   // Initialize speech recognition
@@ -66,14 +68,14 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
     }
   }, [isListening]);
 
-  const processTranscriptWithAI = async () => {
+  const processQuizMetaWithAI = async () => {
     if (!transcript.trim()) {
-      setError('Please speak to provide quiz content first.');
+      setError('Please speak to provide quiz title and description first.');
       return;
     }
 
     if (!apiKey.trim()) {
-      setError(`Please enter your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key.`);
+      setError(`Please enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'Gemini'} API key.`);
       return;
     }
 
@@ -82,33 +84,19 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
 
     try {
       const prompt = `
-        Convert the following spoken description into a structured quiz in JSON format.
+        Extract a quiz title and description from the following spoken text.
         
-        The JSON should have this structure:
+        Return ONLY valid JSON in this exact format (do not wrap in markdown like \`\`\`json):
         {
           "title": "Quiz title",
-          "description": "Quiz description",
-          "questions": [
-            {
-              "text": "Question text",
-              "type": "multiple-choice" | "true-false" | "subjective",
-              "options": [
-                { "text": "Option text" },
-                { "text": "Option text" }
-              ],
-              "correctAnswerId": "ID of correct option (index for simplicity)"
-            }
-          ]
+          "description": "Quiz description"
         }
-        
-        For true-false questions, provide exactly two options: "True" and "False".
-        For subjective questions, include a "sampleAnswer" field but no options.
         
         Spoken description: ${transcript}
       `;
 
       let response;
-      let quizString = '';
+      let metaString = '';
       
       if (provider === 'openai') {
         response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -130,9 +118,9 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
           throw new Error(data.error?.message || 'Failed to process with OpenAI');
         }
         
-        quizString = data.choices[0].message.content;
+        metaString = data.choices[0].message.content;
         
-      } else { // anthropic
+      } else if (provider === 'anthropic') {
         response = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
@@ -153,18 +141,187 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
           throw new Error(data.error?.message || 'Failed to process with Anthropic');
         }
         
-        quizString = data.content[0].text;
+        metaString = data.content[0].text;
+      } else { // gemini
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              { parts: [{ text: prompt }] }
+            ],
+            generationConfig: {
+              responseMimeType: "application/json",
+            }
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Failed to process with Gemini');
+        }
+        
+        // Gemini API might return the JSON directly in candidates[0].content.parts[0].text
+        metaString = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (!metaString) {
+          throw new Error('Gemini response did not contain expected content.');
+        }
       }
       
       // Extract JSON from the response (it might be wrapped in ```json or other markdown)
-      const jsonMatch = quizString.match(/```(?:json)?([\s\S]*?)```/) || [null, quizString];
-      const jsonStr = jsonMatch[1].trim();
+      // Adjusting this logic as Gemini can be configured to return JSON directly
+      let jsonStr = metaString.trim();
+      const jsonMatch = metaString.match(/```(?:json)?([\s\S]*?)```/);
+      if (jsonMatch && jsonMatch[1]) {
+        jsonStr = jsonMatch[1].trim();
+      }
       
-      // Try to parse to validate it's proper JSON
-      JSON.parse(jsonStr);
+      // Parse the JSON
+      const meta = JSON.parse(jsonStr);
+      
+      // Set the quiz metadata
+      setQuizMeta({
+        title: meta.title || 'Untitled Quiz',
+        description: meta.description || ''
+      });
+      
+      // Switch to question input mode
+      setInputMode('question');
+      setTranscript('');
+
+    } catch (err: any) {
+      console.error('Error processing with AI:', err);
+      setError(`Error: ${err.message || 'Failed to process speech with AI'}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const processQuestionWithAI = async () => {
+    if (!transcript.trim()) {
+      setError('Please speak to provide question content first.');
+      return;
+    }
+
+    if (!apiKey.trim()) {
+      setError(`Please enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'Gemini'} API key.`);
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const prompt = `
+        Extract a single quiz question from the following spoken text.
+        
+        Return ONLY valid JSON in this exact format (do not wrap in markdown like \`\`\`json):
+        {
+          "text": "Question text",
+          "type": "multiple-choice" | "true-false" | "subjective",
+          "options": [
+            { "text": "Option text" },
+            { "text": "Option text" }
+          ],
+          "correctAnswerId": 0 (index of correct option)
+        }
+        
+        For true-false questions, provide exactly two options: "True" and "False".
+        For subjective questions, include a "sampleAnswer" field but no options.
+        
+        Spoken description: ${transcript}
+      `;
+
+      let response;
+      let questionString = '';
+      
+      if (provider === 'openai') {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Failed to process with OpenAI');
+        }
+        
+        questionString = data.choices[0].message.content;
+        
+      } else if (provider === 'anthropic') {
+        response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-opus-20240229',
+            max_tokens: 4000,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Failed to process with Anthropic');
+        }
+        
+        questionString = data.content[0].text;
+      } else { // gemini
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              { parts: [{ text: prompt }] }
+            ],
+            generationConfig: {
+              responseMimeType: "application/json",
+            }
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Failed to process with Gemini');
+        }
+        
+        questionString = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (!questionString) {
+          throw new Error('Gemini response did not contain expected content.');
+        }
+      }
+      
+      // Extract JSON from the response (it might be wrapped in ```json or other markdown)
+      let jsonStr = questionString.trim();
+      const jsonMatch = questionString.match(/```(?:json)?([\s\S]*?)```/);
+      if (jsonMatch && jsonMatch[1]) {
+        jsonStr = jsonMatch[1].trim();
+      }
+      
+      // Parse the JSON
+      const questionData = JSON.parse(jsonStr);
       
       // Set the JSON for editing
-      setJsonOutput(jsonStr);
+      setJsonOutput(JSON.stringify(questionData, null, 2));
       setShowJsonEditor(true);
 
     } catch (err: any) {
@@ -172,6 +329,74 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
       setError(`Error: ${err.message || 'Failed to process speech with AI'}`);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const processTranscriptWithAI = async () => {
+    if (inputMode === 'quiz') {
+      await processQuizMetaWithAI();
+    } else {
+      await processQuestionWithAI();
+    }
+  };
+
+  const createQuestionFromJson = () => {
+    try {
+      const questionData = JSON.parse(jsonOutput);
+      
+      // Create a question object with generated IDs
+      const questionId = crypto.randomUUID();
+      
+      // Process the question
+      let options: Option[] = [];
+      let correctAnswerId = '';
+      
+      if (questionData.type === 'multiple-choice' || questionData.type === 'true-false') {
+        options = (questionData.options || []).map((opt: any): Option => {
+          const optionId = crypto.randomUUID();
+          return { id: optionId, text: opt.text || '' };
+        });
+        
+        // Set correct answer ID if specified
+        if (questionData.correctAnswerId !== undefined && options.length > 0) {
+          // If correctAnswerId is an index, convert to the actual ID
+          if (typeof questionData.correctAnswerId === 'number') {
+            const index = Math.min(Math.max(0, questionData.correctAnswerId), options.length - 1);
+            correctAnswerId = options[index].id;
+          } else if (typeof questionData.correctAnswerId === 'string' && options.find(o => o.id === questionData.correctAnswerId)) {
+            correctAnswerId = questionData.correctAnswerId;
+          } else {
+            // Default to first option if not specified correctly
+            correctAnswerId = options[0].id;
+          }
+        }
+      }
+      
+      const question: Question = {
+        id: questionId,
+        text: questionData.text || '',
+        type: questionData.type || 'multiple-choice',
+        options,
+        correctAnswerId,
+        sampleAnswer: questionData.sampleAnswer || ''
+      };
+      
+      // Create a quiz with the existing metadata and the new question
+      const quiz: Quiz = {
+        id: crypto.randomUUID(),
+        title: quizMeta.title,
+        description: quizMeta.description,
+        questions: [question]
+      };
+      
+      onQuizData(quiz);
+      setTranscript('');
+      setJsonOutput('');
+      setShowJsonEditor(false);
+      
+    } catch (err: any) {
+      console.error('Error parsing question data:', err);
+      setError(`Failed to parse question data: ${err.message}`);
     }
   };
 
@@ -237,6 +462,27 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
     }
   };
 
+  const handleSubmitQuiz = () => {
+    if (showJsonEditor) {
+      if (inputMode === 'quiz') {
+        createQuizFromJson();
+      } else {
+        createQuestionFromJson();
+      }
+    } else {
+      const validationError = validateJson();
+      if (validationError) {
+        setError(validationError);
+      } else {
+        if (inputMode === 'quiz') {
+          createQuizFromJson();
+        } else {
+          createQuestionFromJson();
+        }
+      }
+    }
+  };
+
   const formatJson = () => {
     try {
       const parsed = JSON.parse(jsonOutput);
@@ -248,69 +494,104 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
 
   // Helper function to get a basic example JSON
   const getExampleJson = () => {
-    const example = {
-      "title": "Example Quiz",
-      "description": "A simple example quiz",
-      "questions": [
-        {
-          "text": "What is the capital of France?",
-          "type": "multiple-choice",
-          "options": [
-            { "text": "London" },
-            { "text": "Berlin" },
-            { "text": "Paris" },
-            { "text": "Madrid" }
-          ],
-          "correctAnswerId": 2
-        },
-        {
-          "text": "Is the sky blue?",
-          "type": "true-false",
-          "options": [
-            { "text": "True" },
-            { "text": "False" }
-          ],
-          "correctAnswerId": 0
-        },
-        {
-          "text": "Explain how photosynthesis works.",
-          "type": "subjective",
-          "sampleAnswer": "Photosynthesis is the process by which plants convert light energy into chemical energy."
-        }
-      ]
-    };
-    return JSON.stringify(example, null, 2);
+    if (inputMode === 'quiz') {
+      const example = {
+        "title": "Example Quiz",
+        "description": "A simple example quiz",
+        "questions": [
+          {
+            "text": "What is the capital of France?",
+            "type": "multiple-choice",
+            "options": [
+              { "text": "London" },
+              { "text": "Berlin" },
+              { "text": "Paris" },
+              { "text": "Madrid" }
+            ],
+            "correctAnswerId": 2
+          },
+          {
+            "text": "Is the sky blue?",
+            "type": "true-false",
+            "options": [
+              { "text": "True" },
+              { "text": "False" }
+            ],
+            "correctAnswerId": 0
+          },
+          {
+            "text": "Explain how photosynthesis works.",
+            "type": "subjective",
+            "sampleAnswer": "Photosynthesis is the process by which plants convert light energy into chemical energy."
+          }
+        ]
+      };
+      return JSON.stringify(example, null, 2);
+    } else {
+      const example = {
+        "text": "What is the capital of France?",
+        "type": "multiple-choice",
+        "options": [
+          { "text": "London" },
+          { "text": "Berlin" },
+          { "text": "Paris" },
+          { "text": "Madrid" }
+        ],
+        "correctAnswerId": 2
+      };
+      return JSON.stringify(example, null, 2);
+    }
   };
 
   const validateJson = () => {
     try {
       const parsed = JSON.parse(jsonOutput);
       
-      if (!parsed.title || typeof parsed.title !== 'string') {
-        return "Quiz title is required";
-      }
-      
-      if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-        return "At least one question is required";
-      }
-      
-      for (const q of parsed.questions) {
-        if (!q.text || typeof q.text !== 'string') {
+      if (inputMode === 'quiz') {
+        if (!parsed.title || typeof parsed.title !== 'string') {
+          return "Quiz title is required";
+        }
+        
+        if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+          return "At least one question is required";
+        }
+        
+        for (const q of parsed.questions) {
+          if (!q.text || typeof q.text !== 'string') {
+            return "Question text is required";
+          }
+          
+          if (!['multiple-choice', 'true-false', 'subjective'].includes(q.type)) {
+            return `Invalid question type: ${q.type}`;
+          }
+          
+          if ((q.type === 'multiple-choice' || q.type === 'true-false') && 
+              (!Array.isArray(q.options) || q.options.length < 2)) {
+            return `Question "${q.text}" needs at least 2 options`;
+          }
+          
+          if ((q.type === 'multiple-choice' || q.type === 'true-false') && 
+              (q.correctAnswerId === undefined || q.correctAnswerId === null)) {
+            return `Question "${q.text}" needs a correct answer`;
+          }
+        }
+      } else {
+        if (!parsed.text || typeof parsed.text !== 'string') {
           return "Question text is required";
         }
         
-        if (!['multiple-choice', 'true-false', 'subjective'].includes(q.type)) {
-          return `Invalid question type: ${q.type}`;
+        if (!['multiple-choice', 'true-false', 'subjective'].includes(parsed.type)) {
+          return `Invalid question type: ${parsed.type}`;
         }
         
-        if ((q.type === 'multiple-choice' || q.type === 'true-false') && 
-            (!Array.isArray(q.options) || q.options.length < 2)) {
-          return `Question "${q.text}" needs at least 2 options`;
+        if ((parsed.type === 'multiple-choice' || parsed.type === 'true-false') && 
+            (!Array.isArray(parsed.options) || parsed.options.length < 2)) {
+          return `Question needs at least 2 options`;
         }
         
-        if ((q.type === 'multiple-choice' || q.type === 'true-false') && 
-            (q.correctAnswerId === undefined || q.correctAnswerId === null)) {
-          return `Question "${q.text}" needs a correct answer`;
+        if ((parsed.type === 'multiple-choice' || parsed.type === 'true-false') && 
+            (parsed.correctAnswerId === undefined || parsed.correctAnswerId === null)) {
+          return `Question needs a correct answer`;
         }
       }
       
@@ -326,6 +607,14 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
       
       {!showJsonEditor ? (
         <div className="space-y-4">
+          {inputMode === 'question' && (
+            <div className="p-4 bg-blue-50 rounded-lg mb-4">
+              <h4 className="font-medium text-blue-800">Quiz Info</h4>
+              <p className="text-sm text-blue-700"><strong>Title:</strong> {quizMeta.title}</p>
+              <p className="text-sm text-blue-700"><strong>Description:</strong> {quizMeta.description}</p>
+            </div>
+          )}
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               AI Provider
@@ -351,19 +640,29 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
                 />
                 <span className="ml-2">Anthropic</span>
               </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  value="gemini"
+                  checked={provider === 'gemini'}
+                  onChange={() => setProvider('gemini')}
+                  className="h-4 w-4 text-blue-600"
+                />
+                <span className="ml-2">Gemini</span>
+              </label>
             </div>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {provider === 'openai' ? 'OpenAI' : 'Anthropic'} API Key
+              {provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'Gemini'} API Key
             </label>
             <input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key`}
+              placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'Gemini'} API key`}
             />
           </div>
           
@@ -374,7 +673,10 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 min-h-[120px]"
-                placeholder="Your spoken quiz content will appear here. You can also type or edit directly."
+                placeholder={inputMode === 'quiz' 
+                  ? "Speak to provide quiz title and description..." 
+                  : "Speak to provide a question..."
+                }
               />
               <div className="absolute top-3 right-3">
                 <button
@@ -389,7 +691,7 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
               </div>
             </div>
             <p className="text-sm text-gray-500">
-              {isListening ? 'Listening... Speak clearly to describe your quiz.' : 'Click the microphone button to start speaking.'}
+              {isListening ? 'Listening... Speak clearly.' : 'Click the microphone button to start speaking.'}
             </p>
           </div>
           
@@ -413,21 +715,32 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
                   </svg>
                   Processing...
                 </>
-              ) : 'Generate Quiz from Speech'}
+              ) : inputMode === 'quiz' ? 'Generate Quiz Info' : 'Generate Question'}
             </button>
           </div>
           
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <h4 className="font-medium text-blue-800 mb-2">Instructions</h4>
-            <ul className="list-disc pl-5 text-sm text-blue-700 space-y-1">
-              <li>Click the microphone button and speak clearly to describe your quiz</li>
-              <li>Include the quiz title, description, and questions</li>
-              <li>For multiple-choice questions, list the options and mention which is correct</li>
-              <li>For true/false questions, specify if the answer is true or false</li>
-              <li>For subjective questions, provide a sample answer if possible</li>
-              <li>Click "Generate Quiz from Speech" when done speaking</li>
-            </ul>
-            <p className="mt-3 text-sm text-blue-700">Example: "Create a quiz titled 'Science Basics' with description 'Test your knowledge of basic science concepts'. First question: 'What is the chemical symbol for water?' with options 'H2O', 'CO2', 'O2', and 'N2'. The correct answer is 'H2O'."</p>
+            {inputMode === 'quiz' ? (
+              <ul className="list-disc pl-5 text-sm text-blue-700 space-y-1">
+                <li>Click the microphone and speak the quiz title and description</li>
+                <li>Use phrases like "Create a quiz titled..." and "The description is..."</li>
+                <li>After setting up the quiz, you'll add questions one by one</li>
+              </ul>
+            ) : (
+              <ul className="list-disc pl-5 text-sm text-blue-700 space-y-1">
+                <li>Speak clearly to describe one question at a time</li>
+                <li>For multiple-choice questions, list the options and which is correct</li>
+                <li>For true/false questions, specify if the answer is true or false</li>
+                <li>For subjective questions, provide a sample answer if possible</li>
+                <li>After adding this question, you can add more questions</li>
+              </ul>
+            )}
+            {inputMode === 'quiz' ? (
+              <p className="mt-3 text-sm text-blue-700">Example: "Create a quiz titled 'Science Basics' with description 'Test your knowledge of basic science concepts'."</p>
+            ) : (
+              <p className="mt-3 text-sm text-blue-700">Example: "The question is 'What is the chemical symbol for water?' with options 'H2O', 'CO2', 'O2', and 'N2'. The correct answer is 'H2O'."</p>
+            )}
           </div>
         </div>
       ) : (
@@ -435,7 +748,7 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-medium text-gray-700">
-                Edit Quiz JSON
+                Edit {inputMode === 'quiz' ? 'Quiz' : 'Question'} JSON
               </label>
               <div className="flex gap-2">
                 <button
@@ -483,31 +796,33 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
               Back to Speech Input
             </button>
             <button
-              onClick={() => {
-                const validationError = validateJson();
-                if (validationError) {
-                  setError(validationError);
-                } else {
-                  createQuizFromJson();
-                }
-              }}
+              onClick={handleSubmitQuiz}
               className="py-2 px-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
             >
-              Create Quiz
+              {inputMode === 'quiz' ? 'Create Quiz' : 'Add Question'}
             </button>
           </div>
           
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <h4 className="font-medium text-yellow-800 mb-2">JSON Schema</h4>
             <p className="text-sm text-yellow-700 mb-2">Your JSON should follow this structure:</p>
-            <ul className="list-disc pl-5 text-sm text-yellow-700 space-y-1">
-              <li><code>title</code>: String (required)</li>
-              <li><code>description</code>: String (optional)</li>
-              <li><code>questions</code>: Array of question objects (required)</li>
-              <li>Each question needs: <code>text</code>, <code>type</code> ("multiple-choice", "true-false", or "subjective")</li>
-              <li>For multiple-choice/true-false questions: <code>options</code> array and <code>correctAnswerId</code></li>
-              <li>For subjective questions: <code>sampleAnswer</code> (optional)</li>
-            </ul>
+            {inputMode === 'quiz' ? (
+              <ul className="list-disc pl-5 text-sm text-yellow-700 space-y-1">
+                <li><code>title</code>: String (required)</li>
+                <li><code>description</code>: String (optional)</li>
+                <li><code>questions</code>: Array of question objects (required)</li>
+                <li>Each question needs: <code>text</code>, <code>type</code> ("multiple-choice", "true-false", or "subjective")</li>
+                <li>For multiple-choice/true-false questions: <code>options</code> array and <code>correctAnswerId</code></li>
+                <li>For subjective questions: <code>sampleAnswer</code> (optional)</li>
+              </ul>
+            ) : (
+              <ul className="list-disc pl-5 text-sm text-yellow-700 space-y-1">
+                <li><code>text</code>: String (required)</li>
+                <li><code>type</code>: "multiple-choice", "true-false", or "subjective" (required)</li>
+                <li>For multiple-choice/true-false questions: <code>options</code> array and <code>correctAnswerId</code></li>
+                <li>For subjective questions: <code>sampleAnswer</code> (optional)</li>
+              </ul>
+            )}
           </div>
         </div>
       )}
