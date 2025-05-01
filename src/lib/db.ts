@@ -431,4 +431,27 @@ export async function deleteQuiz(quizId: string) {
   }
 }
 
+export async function getStudentById(studentId: string) {
+  const result = await client.execute({
+    sql: 'SELECT * FROM students WHERE id = ?',
+    args: [studentId]
+  });
+  
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
+
+export async function getStudentsByIds(studentIds: string[]) {
+  if (!studentIds.length) return [];
+  
+  // Create placeholders for the IN clause
+  const placeholders = studentIds.map(() => '?').join(',');
+  
+  const result = await client.execute({
+    sql: `SELECT * FROM students WHERE id IN (${placeholders})`,
+    args: studentIds
+  });
+  
+  return result.rows;
+}
+
 export default client;
