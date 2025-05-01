@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Quiz } from '../types';
 import { ClipboardList, ChevronDown, ChevronUp, Trash2, CheckCircle2, XCircle, ArrowLeft, ArrowRight } from 'lucide-react';
-import { getQuizzes, getQuizWithQuestions, getQuizResponses, deleteQuiz as deleteQuizFromDb } from '../lib/db';
+import { getQuizzes, getQuizWithQuestions, getQuizResponses, deleteQuiz as deleteQuizFromDb, getStudentsByIds } from '../lib/db';
 
 interface QuizResponse {
   quizId: string;
@@ -11,9 +11,16 @@ interface QuizResponse {
   score: number;
 }
 
+interface Student {
+  id: string;
+  name: string;
+  created_at?: string;
+}
+
 const QuizResponses: React.FC = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [responses, setResponses] = useState<QuizResponse[]>([]);
+  const [students, setStudents] = useState<Record<string, Student>>({});
   const [expandedQuiz, setExpandedQuiz] = useState<string | null>(null);
   const [selectedResponse, setSelectedResponse] = useState<QuizResponse | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -31,6 +38,26 @@ const QuizResponses: React.FC = () => {
         // Fetch all responses from database
         const fetchedResponses = await getQuizResponses();
         setResponses(fetchedResponses);
+        
+        // Extract unique student IDs from responses
+        const studentIds = [...new Set(fetchedResponses.map(response => response.userId))];
+        
+        // Fetch student details if there are any responses
+        if (studentIds.length > 0) {
+          const fetchedStudents = await getStudentsByIds(studentIds);
+          
+          // Convert to a map for easier lookup
+          const studentMap: Record<string, Student> = {};
+          fetchedStudents.forEach((student: any) => {
+            studentMap[student.id] = {
+              id: student.id,
+              name: student.name,
+              created_at: student.created_at
+            };
+          });
+          
+          setStudents(studentMap);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load quiz data. Please try again later.');
@@ -49,12 +76,18 @@ const QuizResponses: React.FC = () => {
 
   const calculateAverageScore = (quizId: string) => {
     const quizResponses = getResponsesByQuiz(quizId);
+    console.log('Quiz responses:', quizResponses);
     if (quizResponses.length === 0) return 0;
     return quizResponses.reduce((acc, curr) => acc + curr.score, 0) / quizResponses.length;
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  // Get user name from the students map, or show partial ID if not found
+  const getUserName = (userId: string) => {
+    return students[userId]?.name || `${userId.substring(0, 6)}...`;
   };
 
   const toggleQuizExpansion = async (quizId: string) => {
@@ -352,7 +385,7 @@ const QuizResponses: React.FC = () => {
                               >
                                 <td className="px-2 md:px-4 py-3 whitespace-nowrap">
                                   <div className="text-sm font-medium text-gray-900">
-                                    {response.userId.substring(0, 6)}...
+                                    {getUserName(response.userId)}
                                   </div>
                                 </td>
                                 <td className="px-2 md:px-4 py-3 whitespace-nowrap">
