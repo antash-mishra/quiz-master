@@ -16,6 +16,30 @@
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out;
   }
+  
+  /* LaTeX content styling */
+  .latex-content {
+    line-height: 1.6;
+  }
+  
+  .latex-content .katex {
+    font-size: 1em;
+  }
+  
+  .latex-content .katex-display {
+    margin: 1em 0;
+    text-align: center;
+  }
+  
+  /* Improve LaTeX rendering in different contexts */
+  .latex-content .katex .base {
+    display: inline-block;
+  }
+  
+  /* Ensure proper spacing in inline contexts */
+  .latex-content .katex + .katex {
+    margin-left: 0.25em;
+  }
 }
 
 @keyframes fadeIn {

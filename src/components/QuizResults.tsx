@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getStudentResults } from '../lib/db';
+import LaTeXRenderer from './LaTeXRenderer';
 
 interface QuizResultsProps {
   studentId: string;
@@ -74,21 +75,23 @@ const QuizResults: React.FC<QuizResultsProps> = ({ studentId, studentName }) => 
               }`}
             >
               <h3 className="font-medium text-gray-800 mb-4">
-                Question {index + 1}: {result.question_text}
+                Question {index + 1}: <LaTeXRenderer content={result.question_text} />
               </h3>
               
               <div className="space-y-2 text-sm">
                 <p>
                   <span className="text-gray-600">Your answer: </span>
                   <span className={result.is_correct ? 'text-green-600' : 'text-red-600'}>
-                    {result.student_answer}
+                    <LaTeXRenderer content={result.student_answer} />
                   </span>
                 </p>
                 
                 {!result.is_correct && (
                   <p>
                     <span className="text-gray-600">Correct answer: </span>
-                    <span className="text-green-600">{result.correct_answer}</span>
+                    <span className="text-green-600">
+                      <LaTeXRenderer content={result.correct_answer} />
+                    </span>
                   </p>
                 )}
               </div>

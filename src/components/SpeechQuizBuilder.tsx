@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Quiz, Question, Option } from '../types';
+import LaTeXRenderer from './LaTeXRenderer';
 
 interface SpeechQuizBuilderProps {
   onQuizData: (quizData: Quiz) => void;
@@ -84,13 +85,20 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
 
     try {
       const prompt = `
-        Extract a quiz title and description from the following spoken text.
+        Extract a quiz title and description from the following spoken text. 
+        If the content is about mathematics, science, or technical subjects, include LaTeX notation for mathematical expressions.
+        Use $...$ for inline math (e.g., $E = mc^2$) and $$...$$ for display math (e.g., $$\\int x^2 dx$$).
         
         Return ONLY valid JSON in this exact format (do not wrap in markdown like \`\`\`json):
         {
-          "title": "Quiz title",
-          "description": "Quiz description"
+          "title": "Quiz title with LaTeX if appropriate",
+          "description": "Quiz description with LaTeX if appropriate"
         }
+        
+        Examples of LaTeX usage:
+        - Physics: "Understanding $E = mc^2$"
+        - Math: "Calculus: Derivatives and $\\frac{d}{dx}[f(x)]$"
+        - Chemistry: "Balancing equations like $H_2O + NaCl$"
         
         Spoken description: ${transcript}
       `;
@@ -202,7 +210,7 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
 
   const processQuestionWithAI = async () => {
     if (!transcript.trim()) {
-      setError('Please speak to provide question content first.');
+      setError('Please speak a question first.');
       return;
     }
 
@@ -216,23 +224,34 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
 
     try {
       const prompt = `
-        Extract a single quiz question from the following spoken text.
+        Convert this spoken quiz question into a structured format.
+        If the content involves mathematics, science, or technical subjects, use LaTeX notation:
+        - Use $...$ for inline math (e.g., $x^2$, $\\pi$, $E = mc^2$)
+        - Use $$...$$ for display math (e.g., $$\\frac{a}{b}$$, $$\\int_0^1 x dx$$)
         
-        Return ONLY valid JSON in this exact format (do not wrap in markdown like \`\`\`json):
+        Common LaTeX examples:
+        - Fractions: $\\frac{numerator}{denominator}$
+        - Superscripts: $x^2$, $a^{n+1}$
+        - Subscripts: $x_1$, $H_2O$
+        - Greek letters: $\\alpha$, $\\beta$, $\\pi$, $\\theta$
+        - Math functions: $\\sin$, $\\cos$, $\\log$
+        - Integrals: $\\int$, $\\sum$, $\\prod$
+        - Square roots: $\\sqrt{x}$
+        - Equations: $ax^2 + bx + c = 0$
+        
+        Return ONLY valid JSON in this exact format:
         {
-          "text": "Question text",
+          "text": "Question text with LaTeX if appropriate",
           "type": "multiple-choice" | "true-false" | "subjective",
           "options": [
-            { "text": "Option text" },
-            { "text": "Option text" }
+            {"text": "Option 1 with LaTeX if needed"},
+            {"text": "Option 2 with LaTeX if needed"}
           ],
-          "correctAnswerId": 0 (index of correct option)
+          "correctAnswerId": 0,
+          "sampleAnswer": "For subjective questions, provide sample answer with LaTeX if appropriate"
         }
         
-        For true-false questions, provide exactly two options: "True" and "False".
-        For subjective questions, include a "sampleAnswer" field but no options.
-        
-        Spoken description: ${transcript}
+        Spoken question: ${transcript}
       `;
 
       let response;
@@ -333,11 +352,32 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
   };
 
   const processTranscriptWithAI = async () => {
-    if (inputMode === 'quiz') {
-      await processQuizMetaWithAI();
-    } else {
-      await processQuestionWithAI();
-    }
+    const prompt = `
+      Convert this spoken content into a complete quiz with questions and answers.
+      For mathematical, scientific, or technical content, use LaTeX notation:
+      - Inline math: $E = mc^2$, $x^2 + y^2 = z^2$
+      - Display math: $$\\int_0^1 x^2 dx = \\frac{1}{3}$$
+      - Fractions: $\\frac{a}{b}$
+      - Greek letters: $\\pi$, $\\alpha$, $\\beta$
+      
+      Return ONLY valid JSON without markdown formatting:
+      {
+        "title": "Quiz title with LaTeX if appropriate",
+        "description": "Description with LaTeX if appropriate", 
+        "questions": [
+          {
+            "text": "Question with LaTeX notation",
+            "type": "multiple-choice",
+            "options": [{"text": "Option with LaTeX"}],
+            "correctAnswerId": 0
+          }
+        ]
+      }
+      
+      Spoken content: ${transcript}
+    `;
+    
+    await processQuizMetaWithAI();
   };
 
   const createQuestionFromJson = () => {
@@ -803,26 +843,120 @@ const SpeechQuizBuilder: React.FC<SpeechQuizBuilderProps> = ({
             </button>
           </div>
           
+          {/* LaTeX Preview Section */}
+          {jsonOutput && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                LaTeX Preview
+              </h4>
+              <div className="bg-white p-4 rounded border prose max-w-none">
+                {(() => {
+                  try {
+                    const data = JSON.parse(jsonOutput);
+                    if (inputMode === 'quiz') {
+                      return (
+                        <div>
+                          <h5 className="text-lg font-semibold mb-2">
+                            <LaTeXRenderer content={data.title || 'No title'} />
+                          </h5>
+                          {data.description && (
+                            <p className="text-gray-600 mb-4">
+                              <LaTeXRenderer content={data.description} />
+                            </p>
+                          )}
+                          {data.questions && data.questions.length > 0 && (
+                            <div className="space-y-3">
+                              <h6 className="font-medium">Questions:</h6>
+                              {data.questions.slice(0, 3).map((q: any, i: number) => (
+                                <div key={i} className="border-l-4 border-blue-300 pl-3">
+                                  <p className="font-medium">
+                                    {i + 1}. <LaTeXRenderer content={q.text} />
+                                  </p>
+                                  {q.options && (
+                                    <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
+                                      {q.options.slice(0, 2).map((opt: any, j: number) => (
+                                        <li key={j}>
+                                          <LaTeXRenderer content={opt.text} />
+                                        </li>
+                                      ))}
+                                      {q.options.length > 2 && <li>... and {q.options.length - 2} more</li>}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                              {data.questions.length > 3 && (
+                                <p className="text-sm text-gray-500">... and {data.questions.length - 3} more questions</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } else {
+                      // Single question preview
+                      return (
+                        <div>
+                          <p className="font-medium mb-2">
+                            <LaTeXRenderer content={data.text || 'No question text'} />
+                          </p>
+                          <p className="text-sm text-gray-600 mb-2">Type: {data.type}</p>
+                          {data.options && data.options.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-1">Options:</p>
+                              <ul className="list-disc list-inside text-sm">
+                                {data.options.map((opt: any, i: number) => (
+                                  <li key={i}>
+                                    <LaTeXRenderer content={opt.text} />
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {data.sampleAnswer && (
+                            <div className="mt-2">
+                              <p className="text-sm font-medium text-gray-700">Sample Answer:</p>
+                              <p className="text-sm text-gray-600">
+                                <LaTeXRenderer content={data.sampleAnswer} />
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                  } catch {
+                    return <p className="text-gray-500 italic">Invalid JSON - Preview unavailable</p>;
+                  }
+                })()}
+              </div>
+            </div>
+          )}
+          
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <h4 className="font-medium text-yellow-800 mb-2">JSON Schema</h4>
             <p className="text-sm text-yellow-700 mb-2">Your JSON should follow this structure:</p>
             {inputMode === 'quiz' ? (
               <ul className="list-disc pl-5 text-sm text-yellow-700 space-y-1">
-                <li><code>title</code>: String (required)</li>
-                <li><code>description</code>: String (optional)</li>
+                <li><code>title</code>: String (required) - supports LaTeX: $E = mc^2$</li>
+                <li><code>description</code>: String (optional) - supports LaTeX</li>
                 <li><code>questions</code>: Array of question objects (required)</li>
-                <li>Each question needs: <code>text</code>, <code>type</code> ("multiple-choice", "true-false", or "subjective")</li>
-                <li>For multiple-choice/true-false questions: <code>options</code> array and <code>correctAnswerId</code></li>
-                <li>For subjective questions: <code>sampleAnswer</code> (optional)</li>
+                <li>Each question needs: <code>text</code> (with LaTeX), <code>type</code> ("multiple-choice", "true-false", or "subjective")</li>
+                <li>For multiple-choice/true-false questions: <code>options</code> array (with LaTeX) and <code>correctAnswerId</code></li>
+                <li>For subjective questions: <code>sampleAnswer</code> (optional, with LaTeX)</li>
               </ul>
             ) : (
               <ul className="list-disc pl-5 text-sm text-yellow-700 space-y-1">
-                <li><code>text</code>: String (required)</li>
+                <li><code>text</code>: String (required) - supports LaTeX: $x^2 + y^2 = z^2$</li>
                 <li><code>type</code>: "multiple-choice", "true-false", or "subjective" (required)</li>
-                <li>For multiple-choice/true-false questions: <code>options</code> array and <code>correctAnswerId</code></li>
-                <li>For subjective questions: <code>sampleAnswer</code> (optional)</li>
+                <li>For multiple-choice/true-false questions: <code>options</code> array (with LaTeX) and <code>correctAnswerId</code></li>
+                <li>For subjective questions: <code>sampleAnswer</code> (optional, with LaTeX)</li>
               </ul>
             )}
+            <div className="mt-2 text-xs text-yellow-600">
+              💡 Tip: Use LaTeX for math expressions: $\\frac{'{a}'}{'{b}'}$, $\\sqrt{'{x}'}$, $\\alpha$, $\\pi$, $$\\int_0^1 x dx$$
+            </div>
           </div>
         </div>
       )}

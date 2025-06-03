@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Quiz, Question, Option } from '../types';
+import LaTeXRenderer from './LaTeXRenderer';
 
 interface ImageQuizBuilderProps {
   onQuizData: (quizData: Quiz) => void;
@@ -56,13 +57,24 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
               content: [
                 {
                   type: 'text',
-                  text: `Extract a quiz question from this image. Extract the question text, question type (multiple-choice, true-false, or subjective), options, and correct answer if present. Return JSON in this format:
+                  text: `Extract a quiz question from this image. If the image contains mathematical, scientific, or technical content, use LaTeX notation for formulas and expressions.
+                  
+                  LaTeX Guidelines:
+                  - Use $...$ for inline math: $x^2$, $E = mc^2$, $\\pi r^2$
+                  - Use $$...$$ for display math: $$\\frac{a}{b}$$, $$\\int_0^1 x dx$$
+                  - Common symbols: $\\alpha$, $\\beta$, $\\pi$, $\\theta$, $\\sum$, $\\int$, $\\sqrt{x}$
+                  - Fractions: $\\frac{numerator}{denominator}$
+                  - Superscripts/subscripts: $x^2$, $H_2O$
+                  
+                  Return JSON in this format:
                   {
-                    "text": "Question text",
+                    "text": "Question text with LaTeX notation if applicable",
                     "type": "multiple-choice" | "true-false" | "subjective",
-                    "options": [{"text": "Option A"}, {"text": "Option B"}],
-                    "correctAnswerId": 0 (index of correct option)
+                    "options": [{"text": "Option A with LaTeX if needed"}, {"text": "Option B with LaTeX if needed"}],
+                    "correctAnswerId": 0,
+                    "sampleAnswer": "For subjective questions, sample answer with LaTeX if appropriate"
                   }
+                  
                   For true-false questions, provide exactly two options: "True" and "False".
                   For subjective questions, include a "sampleAnswer" field but no options or correctAnswerId.`
                 },
@@ -150,13 +162,24 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
             {
               parts: [
                 {
-                  text: `Extract a quiz question from this image. Extract the question text, question type (multiple-choice, true-false, or subjective), options, and correct answer if present. Return JSON in this format:
+                  text: `Extract a quiz question from this image. If the image contains mathematical, scientific, or technical content, use LaTeX notation for formulas and expressions.
+                  
+                  LaTeX Guidelines:
+                  - Use $...$ for inline math: $x^2$, $E = mc^2$, $\\pi r^2$
+                  - Use $$...$$ for display math: $$\\frac{a}{b}$$, $$\\int_0^1 x dx$$
+                  - Common symbols: $\\alpha$, $\\beta$, $\\pi$, $\\theta$, $\\sum$, $\\int$, $\\sqrt{x}$
+                  - Fractions: $\\frac{numerator}{denominator}$
+                  - Superscripts/subscripts: $x^2$, $H_2O$
+                  
+                  Return JSON in this format:
                   {
-                    "text": "Question text",
+                    "text": "Question text with LaTeX notation if applicable",
                     "type": "multiple-choice" | "true-false" | "subjective",
-                    "options": [{"text": "Option A"}, {"text": "Option B"}],
-                    "correctAnswerId": 0 (index of correct option)
+                    "options": [{"text": "Option A with LaTeX if needed"}, {"text": "Option B with LaTeX if needed"}],
+                    "correctAnswerId": 0,
+                    "sampleAnswer": "For subjective questions, sample answer with LaTeX if appropriate"
                   }
+                  
                   For true-false questions, provide exactly two options: "True" and "False".
                   For subjective questions, include a "sampleAnswer" field but no options or correctAnswerId.
                   
@@ -479,11 +502,21 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
           <div className="mt-6">
             <h4 className="text-lg font-semibold mb-3">Extracted Questions ({extractedQuestions.length})</h4>
             
+            {/* LaTeX Preview Notice */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-800">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium">LaTeX rendering enabled for mathematical expressions</span>
+              </div>
+            </div>
+            
             <div className="space-y-4">
               {extractedQuestions.map((question, index) => (
                 <div key={question.id} className="p-4 border border-gray-200 rounded-lg">
                   <h5 className="text-base md:text-lg font-medium text-gray-800 mb-2">
-                    {index + 1}. {question.text}
+                    {index + 1}. <LaTeXRenderer content={question.text} />
                   </h5>
                   
                   <p className="text-sm text-gray-600 mb-2">
@@ -496,7 +529,7 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
                       <ul className="mt-1 pl-5 list-disc text-sm text-gray-600">
                         {question.options.map((option) => (
                           <li key={option.id} className={option.id === question.correctAnswerId ? 'font-semibold text-green-600' : ''}>
-                            {option.text} {option.id === question.correctAnswerId && '(Correct)'}
+                            <LaTeXRenderer content={option.text} /> {option.id === question.correctAnswerId && '(Correct)'}
                           </li>
                         ))}
                       </ul>
@@ -506,7 +539,9 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
                   {question.type === 'subjective' && question.sampleAnswer && (
                     <div className="mt-2">
                       <p className="text-sm font-medium text-gray-700">Sample Answer:</p>
-                      <p className="text-sm text-gray-600 mt-1 italic">{question.sampleAnswer}</p>
+                      <p className="text-sm text-gray-600 mt-1 italic">
+                        <LaTeXRenderer content={question.sampleAnswer} />
+                      </p>
                     </div>
                   )}
                 </div>
@@ -526,14 +561,17 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
           <h4 className="font-medium text-blue-800 mb-2">Instructions</h4>
           <ul className="list-disc pl-5 text-sm text-blue-700 space-y-1">
-            <li>Enter the quiz title and description manually</li>
+            <li>Enter the quiz title and description manually (LaTeX supported for math expressions)</li>
             <li>Select your preferred AI vision model (OpenAI GPT-4V or Gemini Vision)</li>
-            <li>Upload images of quiz questions - each image should contain one complete question</li>
-            <li>The AI will extract the question text, options, and identify the correct answer</li>
-            <li>Review the extracted questions and make any needed adjustments</li>
+            <li>Upload images of quiz questions - the AI will automatically detect and convert mathematical expressions to LaTeX</li>
+            <li>Each image should contain one complete question with clear, readable text</li>
+            <li>The AI will extract question text, options, and identify correct answers using LaTeX for math content</li>
+            <li>Review the extracted questions with rendered LaTeX and make any needed adjustments</li>
             <li>Click "Create Quiz" when you're satisfied with the results</li>
           </ul>
-          <p className="mt-3 text-sm text-blue-700">Best results come from clear images with readable text and a single question format per image.</p>
+          <p className="mt-3 text-sm text-blue-700">
+            🧮 <strong>Math Content:</strong> Images with equations, formulas, or mathematical symbols will be automatically converted to LaTeX notation for proper rendering.
+          </p>
         </div>
       </div>
     </div>

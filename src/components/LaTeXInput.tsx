@@ -1,0 +1,181 @@
+import React, { useState, useEffect } from 'react';
+import 'katex/dist/katex.min.css';
+import { InlineMath, BlockMath } from 'react-katex';
+
+interface LaTeXInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  multiline?: boolean;
+  rows?: number;
+  label?: string;
+  name?: string;
+}
+
+const LaTeXInput: React.FC<LaTeXInputProps> = ({
+  value,
+  onChange,
+  placeholder = "Enter text with LaTeX (use $...$ for inline math, $$...$$ for display math)",
+  className = "",
+  multiline = false,
+  rows = 3,
+  label,
+  name
+}) => {
+  const [showPreview, setShowPreview] = useState(true);
+  const [isLatexMode, setIsLatexMode] = useState(false);
+
+  // Check if the text contains LaTeX syntax
+  useEffect(() => {
+    const hasLatex = /\$.*?\$/.test(value) || /\$\$.*?\$\$/.test(value);
+    setIsLatexMode(hasLatex);
+  }, [value]);
+
+  // Parse and render LaTeX content
+  const renderLatexContent = (text: string) => {
+    if (!text) return null;
+
+    try {
+      // Split text by math delimiters while preserving them
+      const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/);
+      
+      return parts.map((part, index) => {
+        if (part.startsWith('$$') && part.endsWith('$$')) {
+          // Display math
+          const mathContent = part.slice(2, -2);
+          return <BlockMath key={index} math={mathContent} />;
+        } else if (part.startsWith('$') && part.endsWith('$')) {
+          // Inline math
+          const mathContent = part.slice(1, -1);
+          return <InlineMath key={index} math={mathContent} />;
+        } else {
+          // Regular text
+          return <span key={index}>{part}</span>;
+        }
+      });
+    } catch (error) {
+      return <span className="text-red-500">LaTeX Error: {(error as Error).message}</span>;
+    }
+  };
+
+  const insertLatexSymbol = (symbol: string) => {
+    const textarea = document.querySelector(`[name="${name}"]`) as HTMLTextAreaElement | HTMLInputElement;
+    if (textarea) {
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
+      const newValue = value.substring(0, start) + symbol + value.substring(end);
+      onChange(newValue);
+      
+      // Set cursor position after the inserted symbol
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + symbol.length, start + symbol.length);
+      }, 0);
+    }
+  };
+
+  const commonSymbols = [
+    { symbol: '$\\frac{a}{b}$', label: 'Fraction' },
+    { symbol: '$\\sqrt{x}$', label: 'Square Root' },
+    { symbol: '$x^2$', label: 'Superscript' },
+    { symbol: '$x_1$', label: 'Subscript' },
+    { symbol: '$\\alpha$', label: 'Alpha' },
+    { symbol: '$\\beta$', label: 'Beta' },
+    { symbol: '$\\pi$', label: 'Pi' },
+    { symbol: '$\\theta$', label: 'Theta' },
+    { symbol: '$\\sum$', label: 'Sum' },
+    { symbol: '$\\int$', label: 'Integral' },
+    { symbol: '$\\infty$', label: 'Infinity' },
+    { symbol: '$\\pm$', label: 'Plus/Minus' }
+  ];
+
+  return (
+    <div className="space-y-3">
+      {label && (
+        <label className="block text-sm font-medium text-gray-700">
+          {label}
+        </label>
+      )}
+      
+      {/* LaTeX Toolbar */}
+      {isLatexMode && (
+        <div className="bg-gray-50 p-3 rounded-lg border">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-medium text-gray-600">Quick Symbols:</span>
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+            >
+              {showPreview ? 'Hide Preview' : 'Show Preview'}
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            {commonSymbols.map((item, index) => (
+              <button
+                key={index}
+                onClick={() => insertLatexSymbol(item.symbol)}
+                className="flex flex-col items-center p-2 text-xs bg-white border rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                title={item.label}
+              >
+                <div className="mb-1">
+                  {renderLatexContent(item.symbol)}
+                </div>
+                <span className="text-gray-500">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="space-y-2">
+        {multiline ? (
+          <textarea
+            name={name}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={rows}
+            className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical ${className}`}
+          />
+        ) : (
+          <input
+            type="text"
+            name={name}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+          />
+        )}
+        
+        {/* LaTeX Syntax Help */}
+        {isLatexMode && (
+          <div className="text-xs text-gray-500">
+            💡 Tip: Use $...$ for inline math, $$...$$ for display math
+          </div>
+        )}
+      </div>
+
+      {/* Live Preview */}
+      {showPreview && isLatexMode && value && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span className="text-sm font-medium text-blue-700">Preview:</span>
+          </div>
+          <div className="prose max-w-none text-gray-900 bg-white p-3 rounded border">
+            {renderLatexContent(value)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LaTeXInput; 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Question as QuestionType } from '../types';
 import { useQuiz } from '../context/QuizContext';
+import LaTeXRenderer from './LaTeXRenderer';
+import LaTeXInput from './LaTeXInput';
 
 interface QuestionProps {
   question: QuestionType;
@@ -14,19 +16,23 @@ const Question: React.FC<QuestionProps> = ({ question }) => {
     answerQuestion(question.id, optionId);
   };
 
-  const handleSubjectiveAnswer = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    answerQuestion(question.id, event.target.value);
+  const handleSubjectiveAnswer = (value: string) => {
+    answerQuestion(question.id, value);
   };
 
   if (question.type === 'subjective') {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full mx-auto animate-fade-in">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">{question.text}</h2>
-        <textarea
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+          <LaTeXRenderer content={question.text} />
+        </h2>
+        <LaTeXInput
           value={selectedAnswerId}
           onChange={handleSubjectiveAnswer}
-          className="w-full h-32 p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors"
-          placeholder="Type your answer here..."
+          placeholder="Type your answer here... (LaTeX supported for mathematical expressions)"
+          multiline={true}
+          rows={6}
+          className="h-32"
         />
       </div>
     );
@@ -34,7 +40,9 @@ const Question: React.FC<QuestionProps> = ({ question }) => {
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full mx-auto animate-fade-in">
-      <h2 className="text-2xl font-semibold text-gray-800 mb-6">{question.text}</h2>
+      <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+        <LaTeXRenderer content={question.text} />
+      </h2>
       
       <div className="space-y-3">
         {question.options.map((option) => (
@@ -61,7 +69,9 @@ const Question: React.FC<QuestionProps> = ({ question }) => {
                   </svg>
                 )}
               </div>
-              <span className="text-lg">{option.text}</span>
+              <span className="text-lg">
+                <LaTeXRenderer content={option.text} />
+              </span>
             </div>
           </button>
         ))}

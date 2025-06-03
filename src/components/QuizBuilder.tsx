@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { saveQuiz } from '../lib/db';
 import SpeechQuizBuilder from './SpeechQuizBuilder';
 import ImageQuizBuilder from './ImageQuizBuilder';
+import LaTeXInput from './LaTeXInput';
+import LaTeXRenderer from './LaTeXRenderer';
 
 const QuizBuilder: React.FC = () => {
   const navigate = useNavigate();
@@ -246,29 +248,23 @@ const QuizBuilder: React.FC = () => {
             
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quiz Title
-                </label>
-                <input
-                  type="text"
+                <LaTeXInput
+                  label="Quiz Title"
                   name="title"
                   value={quiz.title}
-                  onChange={handleQuizChange}
-                  className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  onChange={(value) => setQuiz({ ...quiz, title: value })}
                   placeholder="Enter quiz title"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
+                <LaTeXInput
+                  label="Description"
                   name="description"
                   value={quiz.description}
-                  onChange={handleQuizChange}
-                  className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  onChange={(value) => setQuiz({ ...quiz, description: value })}
                   placeholder="Enter quiz description"
+                  multiline={true}
                   rows={3}
                 />
               </div>
@@ -280,16 +276,12 @@ const QuizBuilder: React.FC = () => {
             
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Question Text
-                </label>
-                <input
-                  type="text"
+                <LaTeXInput
+                  label="Question Text"
                   name="text"
                   value={currentQuestion.text}
-                  onChange={handleQuestionChange}
-                  className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter question text"
+                  onChange={(value) => setCurrentQuestion({ ...currentQuestion, text: value })}
+                  placeholder="Enter question text (you can use LaTeX for math: $E = mc^2$)"
                 />
               </div>
 
@@ -316,12 +308,12 @@ const QuizBuilder: React.FC = () => {
                   </label>
                   {currentQuestion.options.map((option, index) => (
                     <div key={option.id} className="flex gap-2 md:gap-4">
-                      <input
-                        type="text"
+                      <LaTeXInput
+                        name={`option-${index}`}
                         value={option.text}
-                        onChange={(e) => handleOptionChange(index, e.target.value)}
-                        className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder={`Option ${index + 1}`}
+                        onChange={(value) => handleOptionChange(index, value)}
+                        placeholder={`Option ${index + 1} (LaTeX supported: $\\frac{a}{b}$)`}
+                        className="flex-1"
                       />
                       <button
                         onClick={() => removeOption(index)}
@@ -364,16 +356,14 @@ const QuizBuilder: React.FC = () => {
 
               {currentQuestion.type === 'subjective' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sample Answer (optional)
-                  </label>
-                  <textarea
+                  <LaTeXInput
+                    label="Sample Answer (optional)"
                     name="sampleAnswer"
                     value={currentQuestion.sampleAnswer || ''}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, sampleAnswer: e.target.value })}
-                    className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    onChange={(value) => setCurrentQuestion({ ...currentQuestion, sampleAnswer: value })}
+                    placeholder="Enter a sample answer (LaTeX supported for equations)"
+                    multiline={true}
                     rows={3}
-                    placeholder="Enter a sample answer"
                   />
                 </div>
               )}
@@ -398,7 +388,7 @@ const QuizBuilder: React.FC = () => {
               <div key={question.id} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex justify-between items-start">
                   <h4 className="text-base md:text-lg font-medium text-gray-800 mb-2">
-                    {index + 1}. {question.text}
+                    {index + 1}. <LaTeXRenderer content={question.text} />
                   </h4>
                   <button
                     onClick={() => removeQuestion(index)}
@@ -419,7 +409,7 @@ const QuizBuilder: React.FC = () => {
                     <ul className="mt-1 pl-5 list-disc text-sm text-gray-600">
                       {question.options.map((option) => (
                         <li key={option.id} className={option.id === question.correctAnswerId ? 'font-semibold text-green-600' : ''}>
-                          {option.text} {option.id === question.correctAnswerId && '(Correct)'}
+                          <LaTeXRenderer content={option.text} /> {option.id === question.correctAnswerId && '(Correct)'}
                         </li>
                       ))}
                     </ul>
@@ -429,7 +419,9 @@ const QuizBuilder: React.FC = () => {
                 {question.type === 'subjective' && question.sampleAnswer && (
                   <div className="mt-2">
                     <p className="text-sm font-medium text-gray-700">Sample Answer:</p>
-                    <p className="text-sm text-gray-600 mt-1 italic">{question.sampleAnswer}</p>
+                    <p className="text-sm text-gray-600 mt-1 italic">
+                      <LaTeXRenderer content={question.sampleAnswer} />
+                    </p>
                   </div>
                 )}
               </div>

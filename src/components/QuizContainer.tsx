@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import StudentRegistration from './StudentRegistration';
 import Quiz from './Quiz';
 import { getQuizzes } from '../lib/db';
+import LaTeXRenderer from './LaTeXRenderer';
 
 interface Quiz {
   id: string;
@@ -79,9 +80,13 @@ const QuizContainer: React.FC = () => {
                 onClick={() => handleQuizSelect(quiz.id)}
                 className="w-full text-left p-3 md:p-4 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
-                <h3 className="text-base md:text-lg font-medium text-gray-800">{quiz.title}</h3>
+                <h3 className="text-base md:text-lg font-medium text-gray-800">
+                  <LaTeXRenderer content={quiz.title} />
+                </h3>
                 {quiz.description && (
-                  <p className="text-sm text-gray-600 mt-1">{quiz.description}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    <LaTeXRenderer content={quiz.description} />
+                  </p>
                 )}
               </button>
             ))}

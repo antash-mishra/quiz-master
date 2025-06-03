@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuiz } from '../context/QuizContext';
 import { Quiz } from '../types';
+import LaTeXRenderer from './LaTeXRenderer';
 
 interface StartQuizProps {
   quiz: Quiz;
@@ -17,8 +18,12 @@ const StartQuiz: React.FC<StartQuizProps> = ({ quiz }) => {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">{quiz.title}</h1>
-        <p className="text-gray-600">{quiz.description}</p>
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">
+          <LaTeXRenderer content={quiz.title} />
+        </h1>
+        <p className="text-gray-600">
+          <LaTeXRenderer content={quiz.description} />
+        </p>
       </div>
       
       <div className="bg-gray-50 rounded-xl p-6 mb-8">
