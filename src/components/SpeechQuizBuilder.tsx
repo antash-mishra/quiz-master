@@ -50,8 +50,8 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       // Mobile-specific configuration
       if (isMobile) {
         // On mobile, set these properties to prevent auto-stopping
-        recognition.continuous = true;
-        recognition.interimResults = false; // Less processing on mobile
+        recognition.continuous = false;
+        recognition.interimResults = true; // Less processing on mobile
         // Some mobile browsers respect these timeout settings
         if ('grammars' in recognition) {
           recognition.grammars = new (window as any).SpeechGrammarList();
