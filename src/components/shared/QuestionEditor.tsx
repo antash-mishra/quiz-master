@@ -1,9 +1,10 @@
 import React from 'react';
 import { Question, Option, QuestionType } from '../../types';
-import { Check, Plus, X, HelpCircle, List, FileText } from 'lucide-react';
+import { Check, Plus, X, HelpCircle, List, FileText, Eye, Edit } from 'lucide-react';
 import ModernSelect from './ModernSelect';
 import ModernInput from './ModernInput';
 import LaTeXInput from '../LaTeXInput';
+import LaTeXRenderer from '../LaTeXRenderer';
 
 interface QuestionEditorProps {
   question: Question;
@@ -13,6 +14,7 @@ interface QuestionEditorProps {
   isEditing?: boolean;
   showSaveCancel?: boolean;
   error?: string;
+  showPreview?: boolean;
 }
 
 export default function QuestionEditor({
@@ -22,9 +24,18 @@ export default function QuestionEditor({
   onCancel,
   isEditing = false,
   showSaveCancel = false,
-  error
+  error,
+  showPreview = false
 }: QuestionEditorProps) {
+  const [viewMode, setViewMode] = React.useState<'edit' | 'preview'>(showPreview ? 'preview' : 'edit');
   
+  // Update view mode when showPreview prop changes
+  React.useEffect(() => {
+    if (showPreview) {
+      setViewMode('preview');
+    }
+  }, [showPreview, question.id]); // Also depend on question.id to reset for new questions
+
   const handleQuestionChange = (field: keyof Question, value: any) => {
     onChange({
       ...question,
@@ -83,6 +94,40 @@ export default function QuestionEditor({
     }
   ];
 
+  const renderViewModeToggle = () => {
+    if (!showPreview) return null;
+
+    return (
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+        <h4 className="text-lg font-semibold text-gray-900">Question Review</h4>
+        <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('edit')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+              viewMode === 'edit'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Edit className="h-4 w-4" />
+            <span>Edit</span>
+          </button>
+          <button
+            onClick={() => setViewMode('preview')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+              viewMode === 'preview'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Eye className="h-4 w-4" />
+            <span>Preview</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const renderQuestionTypeSelector = () => (
     <ModernSelect
       label="Question Type"
@@ -93,20 +138,87 @@ export default function QuestionEditor({
     />
   );
 
-  const renderQuestionText = () => (
-    <LaTeXInput
-      label="Question Text"
-      value={question.text}
-      onChange={(value) => handleQuestionChange('text', value)}
-      placeholder="Enter your question here..."
-      multiline={true}
-      rows={3}
-      name={`question-text-${question.id}`}
-    />
-  );
+  const renderQuestionText = () => {
+    if (showPreview && viewMode === 'preview') {
+      return (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Question Text</label>
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl min-h-[80px] flex items-start">
+            <div className="w-full">
+              <LaTeXRenderer content={question.text} className="text-lg leading-relaxed" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <LaTeXInput
+        label="Question Text"
+        value={question.text}
+        onChange={(value) => handleQuestionChange('text', value)}
+        placeholder="Enter your question here..."
+        multiline={true}
+        rows={3}
+        name={`question-text-${question.id}`}
+      />
+    );
+  };
+
+  const renderOptionsPreview = () => {
+    if (question.type === 'subjective') return null;
+
+    return (
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Answer Options
+        </label>
+        
+        <div className="space-y-3">
+          {question.options.map((option, index) => (
+            <div 
+              key={option.id} 
+              className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                question.correctAnswerId === option.id
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 flex-shrink-0 ${
+                question.correctAnswerId === option.id
+                  ? 'border-green-500 bg-green-500 text-white'
+                  : 'border-gray-300 bg-white text-gray-600'
+              }`}>
+                {question.correctAnswerId === option.id ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <span className="text-sm font-medium">{String.fromCharCode(65 + index)}</span>
+                )}
+              </div>
+              
+              <div className="flex-1">
+                <LaTeXRenderer content={option.text} inline={true} />
+              </div>
+              
+              {question.correctAnswerId === option.id && (
+                <div className="flex items-center text-green-600 text-sm font-medium">
+                  <Check className="h-4 w-4 mr-1" />
+                  Correct
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   const renderOptions = () => {
     if (question.type === 'subjective') return null;
+
+    if (showPreview && viewMode === 'preview') {
+      return renderOptionsPreview();
+    }
 
     return (
       <div className="space-y-4">
@@ -197,8 +309,10 @@ export default function QuestionEditor({
         : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
     }`}>
       <div className="space-y-6">
+        {renderViewModeToggle()}
+        
         <div className="grid grid-cols-1 gap-6">
-          {renderQuestionTypeSelector()}
+          {(!showPreview || viewMode === 'edit') && renderQuestionTypeSelector()}
         </div>
         
         {renderQuestionText()}
@@ -209,7 +323,7 @@ export default function QuestionEditor({
             <div className="flex-shrink-0 w-5 h-5 text-red-600 mt-0.5">
               <HelpCircle className="h-5 w-5" />
             </div>
-            <p className="text-red-700 font-medium text-sm">{error}</p>
+            <p className="text-red-700 font-medium text-sm break-words">{error}</p>
           </div>
         )}
         

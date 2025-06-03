@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Quiz } from '../types';
 import { ClipboardList, ChevronDown, ChevronUp, Trash2, CheckCircle2, XCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { getQuizzes, getQuizWithQuestions, getQuizResponses, deleteQuiz as deleteQuizFromDb, getStudentsByIds } from '../lib/db';
+import LaTeXRenderer from './LaTeXRenderer';
 
 interface QuizResponse {
   quizId: string;
@@ -194,7 +195,6 @@ const QuizResponses: React.FC = () => {
     if (!question) return null;
     
     const userAnswer = selectedResponse.answers[question.id];
-    const userOption = question.options?.find(opt => opt.id === userAnswer);
     const correctOption = question.options?.find(opt => opt.id === question.correctAnswerId);
     const isCorrect = userAnswer === question.correctAnswerId;
 
@@ -239,7 +239,7 @@ const QuizResponses: React.FC = () => {
 
           <div className="space-y-4">
             <div>
-              <p className="text-xl mb-4">{question.text}</p>
+              <p className="text-xl mb-4"><LaTeXRenderer content={question.text} inline={true} /></p>
               {question.options && Array.isArray(question.options) && question.options.length > 0 ? (
                 <div className="space-y-3">
                   {question.options.map(option => (
@@ -256,7 +256,7 @@ const QuizResponses: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>{option.text}</span>
+                        <span><LaTeXRenderer content={option.text} inline={true} /></span>
                         {option.id === userAnswer && option.id === question.correctAnswerId && (
                           <CheckCircle2 className="w-5 h-5 text-green-600" />
                         )}
@@ -291,7 +291,11 @@ const QuizResponses: React.FC = () => {
               <p className="mt-2 text-gray-600">
                 {isCorrect
                   ? 'Great job! You selected the correct answer.'
-                  : `The correct answer was: ${correctOption?.text || 'Not available'}`}
+                  : (
+                    <>
+                      The correct answer was: <LaTeXRenderer content={correctOption?.text || 'Not available'} inline={true} />
+                    </>
+                  )}
               </p>
             </div>
           </div>

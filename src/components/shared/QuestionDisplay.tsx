@@ -1,6 +1,7 @@
 import React from 'react';
 import { Question } from '../../types';
 import { Edit2, X, Check, List, FileText } from 'lucide-react';
+import LaTeXRenderer from '../LaTeXRenderer';
 
 interface QuestionDisplayProps {
   question: Question;
@@ -80,7 +81,7 @@ export default function QuestionDisplay({
           </div>
           
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 leading-relaxed break-words">
-            {question.text}
+            <LaTeXRenderer content={question.text} inline={true} />
           </h3>
         </div>
         
@@ -134,7 +135,7 @@ export default function QuestionDisplay({
                   )}
                 </div>
                 <span className="text-sm sm:text-base text-gray-900 leading-relaxed break-words flex-1">
-                  {option.text}
+                  <LaTeXRenderer content={option.text} inline={true} />
                 </span>
               </div>
             ))}
@@ -151,8 +152,8 @@ export default function QuestionDisplay({
             </span>
             <span className="text-sm sm:text-base text-gray-900 break-words">
               {question.type === 'subjective' 
-                ? (question.sampleAnswer || 'Not provided')
-                : getCorrectAnswerText()
+                ? <LaTeXRenderer content={question.sampleAnswer || 'Not provided'} inline={true} />
+                : <LaTeXRenderer content={getCorrectAnswerText()} inline={true} />
               }
             </span>
           </div>

@@ -25,12 +25,12 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
 
   // Get API keys from environment
   const groqApiKey = import.meta.env.VITE_GROQ_API_KEY || '';
-  const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+  const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
 
-  // Use Gemini for question processing
+  // Use OpenAI for question processing
   const [aiState, aiActions] = useAIProcessing({ 
-    apiKey: geminiApiKey, 
-    provider: 'gemini' as AIProvider['name'] 
+    apiKey: openaiApiKey, 
+    provider: 'openai' as AIProvider['name'] 
   });
   const { isProcessing } = aiState;
   const { processSpeech } = aiActions;
@@ -176,8 +176,8 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       return;
     }
 
-    if (!geminiApiKey.trim()) {
-      setError('Gemini API key is required for question processing.');
+    if (!openaiApiKey.trim()) {
+      setError('OpenAI API key is required for question processing.');
       return;
     }
 
@@ -351,7 +351,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
         {/* Process Button */}
         <button
           onClick={handleProcessSpeech}
-          disabled={isProcessing || !transcript.trim() || !geminiApiKey.trim()}
+          disabled={isProcessing || !transcript.trim() || !openaiApiKey.trim()}
           className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
         >
           {isProcessing ? (
@@ -411,6 +411,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
               question={currentQuestion}
               onChange={setCurrentQuestion}
               error={error}
+              showPreview={true}
             />
           </div>
           

@@ -40,7 +40,7 @@ For subjective questions, include a "sampleAnswer" field but no options or corre
 
 const SPEECH_PROMPT = `
 Convert this spoken quiz question into a structured format.
-If the transcription has some issues, try to fix them.
+If the transcription has some issues, try to fix them even the scientific formualas, check the capitalization and other details.
 If the content involves mathematics, science, or technical subjects, use LaTeX notation:
 - Use $...$ for inline math (e.g., $x^2$, $\\pi$, $E = mc^2$)
 - Use $$...$$ for display math (e.g., $$\\frac{a}{b}$$, $$\\int_0^1 x dx$$)
@@ -93,7 +93,7 @@ export class AIQuestionProcessor {
             'Authorization': `Bearer ${this.apiKey}`
           },
           body: JSON.stringify({
-            model: 'gpt-4-vision-preview',
+            model: 'gpt-4o',
             messages: [
               {
                 role: 'user',

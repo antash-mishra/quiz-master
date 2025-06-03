@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Quiz as QuizType, Question } from '../types';
+import { Quiz as QuizType } from '../types';
 import LaTeXRenderer from './LaTeXRenderer';
 import { getQuestions, saveResponse } from '../lib/db';
 
