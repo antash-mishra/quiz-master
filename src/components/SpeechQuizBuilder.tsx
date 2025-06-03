@@ -39,6 +39,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
@@ -64,8 +65,24 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       };
 
       recognition.onend = () => {
-        setIsRecording(false);
-        setRecognitionActive(false);
+        // Only stop if the user intentionally stopped or there was an error
+        // If recognition ends unexpectedly while recording, restart it
+        if (isRecording && recognitionActive) {
+          try {
+            setTimeout(() => {
+              if (isRecording && recognitionRef.current) {
+                recognitionRef.current.start();
+              }
+            }, 100);
+          } catch (error) {
+            console.error('Error restarting speech recognition:', error);
+            setIsRecording(false);
+            setRecognitionActive(false);
+          }
+        } else {
+          setIsRecording(false);
+          setRecognitionActive(false);
+        }
       };
 
       recognition.onstart = () => {
@@ -109,12 +126,17 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
 
   const stopRecording = () => {
     if (recognitionRef.current && (isRecording || recognitionActive)) {
+      // First set recording to false to prevent restart in onend handler
+      setIsRecording(false);
+      
       try {
         recognitionRef.current.stop();
       } catch (error) {
         console.error('Error stopping speech recognition:', error);
       }
-      setIsRecording(false);
+      
+      // Ensure state is cleared
+      setRecognitionActive(false);
     }
   };
 
