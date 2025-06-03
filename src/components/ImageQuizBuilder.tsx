@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Upload, X, Plus, AlertCircle, CheckCircle, Loader2, Key } from 'lucide-react';
+import { Upload, X, Plus, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Question } from '../types';
 import { AI_PROVIDERS, AIProvider } from '../services/aiProviders';
 import { useAIProcessing } from '../hooks/useAIProcessing';
-import { QuestionEditor, QuestionDisplay, AIProviderSelector, ModernInput } from './shared';
+import { QuestionEditor, QuestionDisplay } from './shared';
 
 interface ImageQuizBuilderProps {
   onQuestionsExtracted: (questions: Question[]) => void;
@@ -12,10 +12,12 @@ interface ImageQuizBuilderProps {
 
 export default function ImageQuizBuilder({ onQuestionsExtracted, isLoading }: ImageQuizBuilderProps) {
   const [images, setImages] = useState<File[]>([]);
-  const [apiKey, setApiKey] = useState('');
-  const [provider, setProvider] = useState<AIProvider['name']>('openai');
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+
+  // Use Gemini by default with API key from environment variables
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+  const provider: AIProvider['name'] = 'gemini';
 
   const [aiState, aiActions] = useAIProcessing({ apiKey, provider });
   const { isProcessing, error, extractedQuestions } = aiState;
@@ -131,7 +133,7 @@ export default function ImageQuizBuilder({ onQuestionsExtracted, isLoading }: Im
           <div className="p-3 bg-blue-500 rounded-xl">
             <Upload className="h-6 w-6 text-white" />
           </div>
-          <div>
+        <div>
             <h3 className="text-2xl font-bold text-gray-900">
               Extract Questions from Images
             </h3>
@@ -146,24 +148,6 @@ export default function ImageQuizBuilder({ onQuestionsExtracted, isLoading }: Im
           You can edit or remove extracted questions before adding them to your quiz.
         </p>
 
-        {/* API Configuration */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <AIProviderSelector
-            value={provider}
-            onChange={setProvider}
-          />
-          
-          <ModernInput
-            type="password"
-            label="API Key"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={`Enter your ${provider} API key`}
-            showPasswordToggle={true}
-            icon={Key}
-          />
-        </div>
-
         {/* Image Upload */}
         <div className="mb-8">
           <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -172,20 +156,20 @@ export default function ImageQuizBuilder({ onQuestionsExtracted, isLoading }: Im
           <div className="border-2 border-dashed border-blue-300 rounded-2xl p-8 text-center bg-white hover:bg-blue-50 transition-colors duration-200">
             <div className="p-4 bg-blue-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
               <Upload className="h-10 w-10 text-blue-600" />
-            </div>
+              </div>
             <div className="space-y-3">
               <p className="text-gray-700 text-lg">
                 Drop your images here, or{' '}
                 <label className="text-blue-600 hover:text-blue-500 cursor-pointer font-semibold underline decoration-2 underline-offset-2">
                   browse
-                  <input 
-                    type="file" 
+              <input 
+                type="file" 
                     multiple
-                    accept="image/*" 
-                    onChange={handleImageUpload}
+                accept="image/*" 
+                onChange={handleImageUpload}
                     className="sr-only"
-                  />
-                </label>
+              />
+            </label>
               </p>
               <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB each</p>
             </div>
@@ -242,10 +226,10 @@ export default function ImageQuizBuilder({ onQuestionsExtracted, isLoading }: Im
             <p className="text-red-700 font-medium">{error}</p>
           </div>
         )}
-      </div>
-      
-      {/* Extracted Questions */}
-      {extractedQuestions.length > 0 && (
+        </div>
+        
+        {/* Extracted Questions */}
+        {extractedQuestions.length > 0 && (
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-2xl border border-green-100">
           <div className="flex items-center space-x-3 mb-6">
             <div className="p-3 bg-green-500 rounded-xl">
@@ -257,8 +241,8 @@ export default function ImageQuizBuilder({ onQuestionsExtracted, isLoading }: Im
               </h3>
               <p className="text-green-700 mt-1">
                 Review and edit questions before adding to your quiz
-              </p>
-            </div>
+                      </p>
+                    </div>
           </div>
           
           <div className="space-y-6">
@@ -282,11 +266,11 @@ export default function ImageQuizBuilder({ onQuestionsExtracted, isLoading }: Im
                     onRemove={removeExtractedQuestion}
                     showActions={true}
                   />
-                )}
-              </div>
-            ))}
-          </div>
-          
+                  )}
+                </div>
+              ))}
+            </div>
+            
           <div className="mt-8 pt-6 border-t border-green-200">
             <button
               onClick={handleAddExtractedQuestions}

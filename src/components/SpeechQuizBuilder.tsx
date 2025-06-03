@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Play, Pause, Square, AlertCircle, CheckCircle, Loader2, Plus, Volume2, Key } from 'lucide-react';
+import { Mic, MicOff, Play, Pause, Square, AlertCircle, CheckCircle, Loader2, Plus, Volume2 } from 'lucide-react';
 import { Question } from '../types';
 import { AI_PROVIDERS, AIProvider } from '../services/aiProviders';
 import { useAIProcessing } from '../hooks/useAIProcessing';
-import { QuestionEditor, QuestionDisplay, AIProviderSelector, ModernInput } from './shared';
+import { QuestionEditor, QuestionDisplay } from './shared';
 import '../types/speech.d.ts';
 
 interface SpeechQuizBuilderProps {
@@ -15,12 +15,15 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [provider, setProvider] = useState<AIProvider['name']>('openai');
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  const [recognitionActive, setRecognitionActive] = useState(false);
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Use Gemini by default with API key from environment variables
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+  const provider: AIProvider['name'] = 'gemini';
 
   const [aiState, aiActions] = useAIProcessing({ apiKey, provider });
   const { isProcessing, error } = aiState;
@@ -51,35 +54,66 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error);
+        
+        // Don't show "aborted" errors to users as they're usually intentional
+        if (event.error !== 'aborted') {
           setError(`Speech recognition error: ${event.error}`);
+        }
         setIsRecording(false);
+        setRecognitionActive(false);
       };
 
       recognition.onend = () => {
         setIsRecording(false);
-        };
-      } else {
+        setRecognitionActive(false);
+      };
+
+      recognition.onstart = () => {
+        setRecognitionActive(true);
+      };
+    } else {
       setError('Speech recognition is not supported in this browser');
     }
     
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          // Stop gracefully instead of aborting
+          if (recognitionActive) {
+            recognitionRef.current.stop();
+          }
+          setRecognitionActive(false);
+        } catch (error) {
+          // Ignore cleanup errors
+          console.log('Speech recognition cleanup:', error);
+        }
       }
     };
-  }, [setError]);
+  }, [setError, recognitionActive]);
 
   const startRecording = () => {
-    if (recognitionRef.current && !isRecording) {
+    if (recognitionRef.current && !isRecording && !recognitionActive) {
       setError('');
-      setIsRecording(true);
-      recognitionRef.current.start();
+      
+      try {
+        setIsRecording(true);
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        setError('Failed to start speech recognition');
+        setIsRecording(false);
+        setRecognitionActive(false);
+      }
     }
   };
 
   const stopRecording = () => {
-    if (recognitionRef.current && isRecording) {
-      recognitionRef.current.stop();
+    if (recognitionRef.current && (isRecording || recognitionActive)) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping speech recognition:', error);
+      }
       setIsRecording(false);
     }
   };
@@ -189,24 +223,6 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
           You can review and edit the generated questions before adding them to your quiz.
         </p>
 
-        {/* API Configuration */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <AIProviderSelector
-            value={provider}
-            onChange={setProvider}
-          />
-          
-          <ModernInput
-            type="password"
-            label="API Key"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={`Enter your ${provider} API key`}
-            showPasswordToggle={true}
-            icon={Key}
-          />
-        </div>
-
         {/* Speech Recording */}
         <div className="mb-8">
           <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -238,14 +254,14 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                     <span>Start Recording</span>
                   </button>
                   
-                  <button
+                <button
                     onClick={stopRecording}
                     disabled={!isRecording}
                     className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
                   >
                     <Square className="h-5 w-5" />
                     <span>Stop Recording</span>
-                  </button>
+                </button>
                 </div>
                 
                 {isRecording && (
@@ -264,16 +280,16 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
               </div>
             )}
           </div>
-        </div>
-
+            </div>
+          
         {/* Process Button */}
-        <button
+            <button
           onClick={handleProcessSpeech}
           disabled={isProcessing || !transcript.trim() || !apiKey.trim()}
           className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
-        >
-          {isProcessing ? (
-            <>
+            >
+              {isProcessing ? (
+                <>
               <Loader2 className="h-6 w-6 animate-spin" />
               <span>Processing Speech...</span>
             </>
@@ -292,7 +308,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
             <p className="text-red-700 font-medium">{error}</p>
           </div>
         )}
-      </div>
+        </div>
       
       {/* Generated Question */}
       {currentQuestion && (
@@ -317,7 +333,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
               onChange={setCurrentQuestion}
               error={error}
             />
-          </div>
+            </div>
           
           <div className="mt-8 pt-6 border-t border-green-200">
             <button

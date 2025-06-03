@@ -158,16 +158,16 @@ export default function QuizQuestionsStep({
           <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-center space-x-3">
             <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
             <p className="text-green-700 font-medium text-sm sm:text-base">{successMessage}</p>
-          </div>
+      </div>
         )}
 
         {/* Error Message */}
-        {error && (
+      {error && (
           <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-start space-x-3">
             <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
             <p className="text-red-700 font-medium text-sm sm:text-base">{error}</p>
-          </div>
-        )}
+        </div>
+      )}
 
         {/* Input Mode Content */}
         <div className="mb-6">
@@ -187,20 +187,20 @@ export default function QuizQuestionsStep({
               {getDisplayQuestion() && (
                 <QuestionEditor
                   question={getDisplayQuestion()!}
-                  onChange={handleQuestionChange}
+                onChange={handleQuestionChange}
                   error={error}
                 />
               )}
 
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4 sm:space-y-0">
-                  <button
+                    <button
                     onClick={handleCancel}
                     className="w-full sm:w-auto px-6 py-3 text-gray-600 hover:text-gray-800 bg-white border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium"
-                  >
+                    >
                     Cancel
-                  </button>
-                  
+                    </button>
+
                   <button
                     onClick={handleSaveOrAdd}
                     disabled={isLoading}
@@ -216,9 +216,9 @@ export default function QuizQuestionsStep({
                     )}
                   </button>
                 </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {inputMode === 'image' && (
             <ImageQuizBuilder
@@ -256,7 +256,7 @@ export default function QuizQuestionsStep({
                 Review and manage your questions
               </p>
             </div>
-            
+
             <button
               onClick={handleFinishQuiz}
               disabled={isLoading || questions.length === 0}
@@ -272,7 +272,7 @@ export default function QuizQuestionsStep({
               )}
             </button>
           </div>
-          
+
           <div className="space-y-4">
             {questions.map((question, index) => (
               <div key={question.id} className="border border-gray-200 rounded-xl overflow-hidden">
