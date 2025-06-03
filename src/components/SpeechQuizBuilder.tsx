@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Play, Pause, Square, AlertCircle, CheckCircle, Loader2, Plus, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Play, Pause, Square, AlertCircle, CheckCircle, Loader2, Plus, Volume2, RotateCcw } from 'lucide-react';
 import { Question } from '../types';
 import { AI_PROVIDERS, AIProvider } from '../services/aiProviders';
 import { useAIProcessing } from '../hooks/useAIProcessing';
@@ -17,9 +17,15 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [recognitionActive, setRecognitionActive] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Detect if we're on mobile
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   // Use Gemini by default with API key from environment variables
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
@@ -41,6 +47,17 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
 
+      // Mobile-specific configuration
+      if (isMobile) {
+        // On mobile, set these properties to prevent auto-stopping
+        recognition.continuous = true;
+        recognition.interimResults = false; // Less processing on mobile
+        // Some mobile browsers respect these timeout settings
+        if ('grammars' in recognition) {
+          recognition.grammars = new (window as any).SpeechGrammarList();
+        }
+      }
+
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -56,12 +73,57 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error);
         
-        // Don't show "aborted" errors to users as they're usually intentional
-        if (event.error !== 'aborted') {
-          setError(`Speech recognition error: ${event.error}`);
+        // Handle different types of errors with appropriate messages and actions
+        switch (event.error) {
+          case 'aborted':
+            // Don't show aborted errors as they're usually intentional
+            break;
+          case 'network':
+            if (retryCount < 3 && isRecording) {
+              setIsRetrying(true);
+              setError(`Network error (retry ${retryCount + 1}/3): Attempting to reconnect...`);
+              setRetryCount(prev => prev + 1);
+              
+              // Retry after 2 seconds
+              retryTimeoutRef.current = setTimeout(() => {
+                if (isRecording && recognitionRef.current) {
+                  try {
+                    setIsRetrying(false);
+                    recognitionRef.current.start();
+                  } catch (error) {
+                    console.error('Error retrying speech recognition:', error);
+                    setIsRetrying(false);
+                    setError('Failed to restart speech recognition after network error.');
+                    setIsRecording(false);
+                    setRecognitionActive(false);
+                  }
+                }
+              }, 2000);
+              return; // Don't stop recording, we're retrying
+            } else {
+              setError('Network error: Please check your internet connection and try again. Speech recognition requires an internet connection.');
+            }
+            break;
+          case 'not-allowed':
+            setError('Microphone access denied. Please allow microphone permissions and refresh the page.');
+            break;
+          case 'no-speech':
+            setError('No speech detected. Please speak clearly and try again.');
+            // Don't stop recording for no-speech errors, just continue listening
+            return;
+          case 'audio-capture':
+            setError('Microphone not found or not working. Please check your microphone.');
+            break;
+          case 'service-not-allowed':
+            setError('Speech recognition service not available. Please try again later.');
+            break;
+          default:
+            setError(`Speech recognition error: ${event.error}. Please try again.`);
         }
+        
         setIsRecording(false);
         setRecognitionActive(false);
+        setIsRetrying(false);
       };
 
       recognition.onend = () => {
@@ -69,11 +131,14 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
         // If recognition ends unexpectedly while recording, restart it
         if (isRecording && recognitionActive) {
           try {
+            // Use shorter timeout for mobile to restart faster
+            const restartDelay = isMobile ? 50 : 100;
             setTimeout(() => {
               if (isRecording && recognitionRef.current) {
+                console.log('Auto-restarting speech recognition...', isMobile ? '(mobile)' : '(desktop)');
                 recognitionRef.current.start();
               }
-            }, 100);
+            }, restartDelay);
           } catch (error) {
             console.error('Error restarting speech recognition:', error);
             setIsRecording(false);
@@ -105,19 +170,31 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
           console.log('Speech recognition cleanup:', error);
         }
       }
+      
+      // Clear retry timeout
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
     };
   }, [setError, recognitionActive]);
 
   const startRecording = () => {
-    if (recognitionRef.current && !isRecording && !recognitionActive) {
+    if (recognitionRef.current && !isRecording && !recognitionActive && !isRetrying) {
       setError('');
+      setRetryCount(0); // Reset retry count
+      
+      // Show mobile-specific message
+      if (isMobile) {
+        console.log('Starting speech recognition on mobile device');
+      }
       
       try {
         setIsRecording(true);
         recognitionRef.current.start();
       } catch (error) {
         console.error('Error starting speech recognition:', error);
-        setError('Failed to start speech recognition');
+        setError(`Failed to start speech recognition${isMobile ? ' (mobile)' : ''}`);
         setIsRecording(false);
         setRecognitionActive(false);
       }
@@ -128,6 +205,13 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
     if (recognitionRef.current && (isRecording || recognitionActive)) {
       // First set recording to false to prevent restart in onend handler
       setIsRecording(false);
+      setIsRetrying(false);
+      
+      // Clear any pending retry
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       
       try {
         recognitionRef.current.stop();
@@ -137,7 +221,23 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       
       // Ensure state is cleared
       setRecognitionActive(false);
+      setRetryCount(0);
     }
+  };
+
+  const restartRecording = () => {
+    // Stop current recording
+    stopRecording();
+    
+    // Clear transcript and errors
+    setTranscript('');
+    setError('');
+    setCurrentQuestion(null);
+    
+    // Start new recording after a brief delay
+    setTimeout(() => {
+      startRecording();
+    }, 200);
   };
 
   const clearTranscript = () => {
@@ -243,6 +343,13 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
         <p className="text-gray-700 mb-8 text-lg">
           Speak your quiz questions naturally and AI will convert them into structured multiple-choice format. 
           You can review and edit the generated questions before adding them to your quiz.
+          {isMobile && (
+            <span className="block mt-2 text-blue-600 font-medium">
+              📱 Mobile tip: Keep speaking continuously for best results. The app will automatically restart if needed.
+              <br />
+              💡 Use the "Restart" button to clear and start fresh anytime.
+            </span>
+          )}
         </p>
 
         {/* Speech Recording */}
@@ -269,16 +376,25 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                 <div className="flex items-center justify-center space-x-4">
                   <button
                     onClick={startRecording}
-                    disabled={isRecording || isProcessing}
+                    disabled={isRecording || isProcessing || isRetrying}
                     className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
                   >
                     <Mic className="h-5 w-5" />
                     <span>Start Recording</span>
                   </button>
                   
+                  <button
+                    onClick={restartRecording}
+                    disabled={isProcessing || isRetrying}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                  >
+                    <RotateCcw className="h-5 w-5" />
+                    <span>Restart</span>
+                  </button>
+                  
                 <button
                     onClick={stopRecording}
-                    disabled={!isRecording}
+                    disabled={!isRecording && !isRetrying}
                     className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
                   >
                     <Square className="h-5 w-5" />
@@ -286,9 +402,9 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                 </button>
                 </div>
                 
-                {isRecording && (
-                  <p className="text-red-600 font-medium animate-pulse">
-                    🔴 Recording... Speak your question clearly
+                {(isRecording || isRetrying) && (
+                  <p className={`font-medium animate-pulse ${isRetrying ? 'text-yellow-600' : 'text-red-600'}`}>
+                    {isRetrying ? '🔄 Reconnecting... Please wait' : '🔴 Recording... Speak your question clearly'}
                   </p>
                 )}
               </div>
