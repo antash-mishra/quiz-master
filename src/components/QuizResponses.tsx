@@ -301,8 +301,8 @@ const QuizResponses: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-4 md:py-6">
-      <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Quiz Responses</h2>
+    <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 py-4 md:py-6">
+      <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 px-1">Quiz Responses</h2>
       
       {loading ? (
         <div className="text-center p-4 md:p-8">
@@ -367,47 +367,86 @@ const QuizResponses: React.FC = () => {
                     ) : selectedResponse ? (
                       renderResponseDetails()
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">User</th>
-                              <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                              <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                              <th className="px-2 md:px-4 py-3 text-right text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {quizResponses.map(response => (
-                              <tr 
-                                key={`${response.quizId}_${response.userId}_${response.timestamp}`}
-                                className="hover:bg-gray-50"
-                              >
-                                <td className="px-2 md:px-4 py-3 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {getUserName(response.userId)}
+                      <div className="space-y-4">
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {quizResponses.map(response => (
+                                <tr 
+                                  key={`${response.quizId}_${response.userId}_${response.timestamp}`}
+                                  className="hover:bg-gray-50"
+                                >
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {getUserName(response.userId)}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className={`text-sm font-medium ${getScoreColor(response.score)}`}>
+                                      {response.score}%
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                    {formatDate(response.timestamp)}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                    <button
+                                      onClick={() => viewResponseDetails(response)}
+                                      className="text-blue-600 hover:text-blue-900 font-medium"
+                                    >
+                                      Details
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-3">
+                          {quizResponses.map(response => (
+                            <div
+                              key={`${response.quizId}_${response.userId}_${response.timestamp}`}
+                              className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-gray-300 hover:shadow-md transition-all duration-200"
+                            >
+                              <div className="flex flex-col space-y-3">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="text-sm font-semibold text-gray-900 mb-1">
+                                      {getUserName(response.userId)}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {formatDate(response.timestamp)}
+                                    </div>
                                   </div>
-                                </td>
-                                <td className="px-2 md:px-4 py-3 whitespace-nowrap">
-                                  <div className={`text-sm font-medium ${getScoreColor(response.score)}`}>
-                                    {response.score}%
+                                  <div className="flex items-center space-x-3">
+                                    <div className={`text-lg font-bold ${getScoreColor(response.score)}`}>
+                                      {response.score}%
+                                    </div>
                                   </div>
-                                </td>
-                                <td className="px-2 md:px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                  {formatDate(response.timestamp)}
-                                </td>
-                                <td className="px-2 md:px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                </div>
+                                <div className="flex justify-end">
                                   <button
                                     onClick={() => viewResponseDetails(response)}
-                                    className="text-blue-600 hover:text-blue-900"
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
                                   >
-                                    Details
+                                    View Details
                                   </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

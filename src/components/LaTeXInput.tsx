@@ -25,12 +25,28 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
 }) => {
   const [showPreview, setShowPreview] = useState(true);
   const [isLatexMode, setIsLatexMode] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   // Check if the text contains LaTeX syntax
   useEffect(() => {
-    const hasLatex = /\$.*?\$/.test(value) || /\$\$.*?\$\$/.test(value);
+    // More inclusive regex that matches:
+    // - Complete patterns: $...$ and $$...$$
+    // - Incomplete patterns: $, $$, $..., $$...
+    const hasLatex = /\$/.test(value);
     setIsLatexMode(hasLatex);
   }, [value]);
+
+  // Handle focus and blur events
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
+  // Only show LaTeX UI when focused AND in LaTeX mode
+  const shouldShowLatexUI = isLatexMode && isFocused;
 
   // Parse and render LaTeX content
   const renderLatexContent = (text: string) => {
@@ -99,7 +115,7 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
       )}
       
       {/* LaTeX Toolbar */}
-      {isLatexMode && (
+      {shouldShowLatexUI && (
         <div className="bg-gray-50 p-3 rounded-lg border">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs font-medium text-gray-600">Quick Symbols:</span>
@@ -136,9 +152,11 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
             name={name}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder={placeholder}
             rows={rows}
-            className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical ${className}`}
+            className={`w-full p-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none text-sm sm:text-base max-w-full ${className}`}
           />
         ) : (
           <input
@@ -146,13 +164,15 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
             name={name}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder={placeholder}
-            className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+            className={`w-full p-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm sm:text-base max-w-full ${className}`}
           />
         )}
         
         {/* LaTeX Syntax Help */}
-        {isLatexMode && (
+        {shouldShowLatexUI && (
           <div className="text-xs text-gray-500">
             💡 Tip: Use $...$ for inline math, $$...$$ for display math
           </div>
@@ -160,7 +180,7 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
       </div>
 
       {/* Live Preview */}
-      {showPreview && isLatexMode && value && (
+      {showPreview && shouldShowLatexUI && value && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
             <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

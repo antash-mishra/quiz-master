@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, Mic, Camera, PenTool, Edit, Save, X } from 'lucide-react';
-import { Quiz, Question, QuestionType } from '../types';
-import { addQuestionToQuiz, getQuizMetadata, getQuestions } from '../lib/db';
-import SpeechQuizBuilder from './SpeechQuizBuilder';
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Quiz, Question } from '../types';
+import { QuizInputModeSelector, type InputMode } from './quiz';
+import { useQuestionManagement } from '../hooks/useQuestionManagement';
+import { QuestionEditor, QuestionDisplay } from './shared';
 import ImageQuizBuilder from './ImageQuizBuilder';
-import LaTeXInput from './LaTeXInput';
-import LaTeXRenderer from './LaTeXRenderer';
+import SpeechQuizBuilder from './SpeechQuizBuilder';
 
 interface QuizQuestionsStepProps {
   quizId: string;
@@ -18,640 +18,303 @@ interface QuizQuestionsStepProps {
   onBack: () => void;
 }
 
-const QuizQuestionsStep: React.FC<QuizQuestionsStepProps> = ({ 
+export default function QuizQuestionsStep({ 
   quizId, 
   quizMetadata, 
   onComplete, 
   onBack 
-}) => {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState<Question>({
-    id: crypto.randomUUID(),
-    text: '',
-    type: 'multiple-choice',
-    options: [
-      { id: crypto.randomUUID(), text: '' },
-      { id: crypto.randomUUID(), text: '' },
-    ],
-    correctAnswerId: '',
+}: QuizQuestionsStepProps) {
+  const [inputMode, setInputMode] = useState<InputMode>('manual');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+
+  // Fix: Use array destructuring for the hook return
+  const [questionState, questionActions] = useQuestionManagement({ 
+    quizId: quizId 
   });
   
-  const [error, setError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [inputMode, setInputMode] = useState<'manual' | 'speech' | 'image'>('manual');
-  const [isListening, setIsListening] = useState(false);
-  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
-  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string>('');
+  const { questions, editingQuestionIndex, editingQuestion, isLoading, error } = questionState;
+  const { 
+    addQuestion, 
+    removeQuestion, 
+    updateQuestion, 
+    startEditingQuestion, 
+    cancelEditingQuestion,
+    saveEditedQuestion,
+    loadExistingQuestions,
+    setError,
+    createEmptyQuestion
+  } = questionActions;
 
-  // Load existing questions from database on component mount
+  // Initialize empty question for manual creation
   useEffect(() => {
-    const loadExistingQuestions = async () => {
-      try {
-        const existingQuestions = await getQuestions(quizId);
-        // Map database types back to frontend types
-        const mappedQuestions = existingQuestions.map(q => ({
-          ...q,
-          type: mapQuestionTypeFromDB(q.type) as QuestionType
-        }));
-        setQuestions(mappedQuestions);
-      } catch (err) {
-        console.error('Failed to load existing questions:', err);
-      }
-    };
+    if (inputMode === 'manual' && !currentQuestion && editingQuestionIndex === null) {
+      setCurrentQuestion(createEmptyQuestion());
+    }
+  }, [inputMode, currentQuestion, editingQuestionIndex, createEmptyQuestion]);
 
+  // Load existing questions when component mounts
+  useEffect(() => {
     loadExistingQuestions();
-  }, [quizId]);
+  }, [loadExistingQuestions]);
 
-  const mapQuestionTypeFromDB = (dbType: string): string => {
-    switch (dbType) {
-      case 'multiple_choice':
-        return 'multiple-choice';
-      case 'true_false':
-        return 'true-false';
-      case 'text':
-        return 'subjective';
-      default:
-        return dbType;
+  // Clear success message after timeout
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(''), 3000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [successMessage]);
 
-  const mapQuestionTypeForDB = (type: string): string => {
-    switch (type) {
-      case 'multiple-choice':
-        return 'multiple_choice';
-      case 'true-false':
-        return 'true_false';
-      case 'subjective':
-        return 'text';
-      default:
-        return type;
-    }
-  };
-
-  const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    if (e.target.name === 'type') {
-      const type = e.target.value as QuestionType;
-      setCurrentQuestion({
-        ...currentQuestion,
-        type,
-        options: type === 'subjective' ? [] : currentQuestion.options,
-      });
-    } else {
-      setCurrentQuestion({ ...currentQuestion, [e.target.name]: e.target.value });
-    }
-  };
-
-  const handleOptionChange = (index: number, value: string) => {
-    const newOptions = [...currentQuestion.options];
-    newOptions[index] = { ...newOptions[index], text: value };
-    setCurrentQuestion({ ...currentQuestion, options: newOptions });
-  };
-
-  const addOption = () => {
-    setCurrentQuestion({
-      ...currentQuestion,
-      options: [...currentQuestion.options, { id: crypto.randomUUID(), text: '' }],
-    });
-  };
-
-  const removeOption = (index: number) => {
-    const newOptions = currentQuestion.options.filter((_, i) => i !== index);
-    setCurrentQuestion({ ...currentQuestion, options: newOptions });
-  };
-
-  const validateQuestion = (question: Question): boolean => {
-    if (!question.text.trim()) {
-      setError('Question text is required');
-      return false;
-    }
-
-    if (question.type !== 'subjective') {
-      if (!question.correctAnswerId) {
-        setError('Please select a correct answer');
-        return false;
-      }
-
-      if (question.options.some(opt => !opt.text.trim())) {
-        setError('All options must have text');
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const addQuestionToState = async (question: Question, showSuccess: boolean = true) => {
-    try {
-      setIsLoading(true);
-      
-      // Create a modified version of the question with DB-compatible type
-      const dbQuestion = {
-        ...question,
-        type: mapQuestionTypeForDB(question.type)
-      };
-      
-      // Add question to database
-      await addQuestionToQuiz(quizId, dbQuestion);
-      
-      // Add to local state
-      setQuestions(prevQuestions => [...prevQuestions, question]);
-
-      setError('');
-      
-      if (showSuccess) {
-        setSuccessMessage('Question added successfully');
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccessMessage(''), 3000);
-      }
-      
-      return true;
-    } catch (err) {
-      console.error('Failed to add question:', err);
-      setError('Failed to add question. Please try again.');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const addQuestion = async () => {
-    if (!validateQuestion(currentQuestion)) {
-      return;
-    }
-
-    const success = await addQuestionToState(currentQuestion);
+  const handleAddQuestion = async (question: Question) => {
+    const success = await addQuestion(question);
     if (success) {
-      // Reset form only after successful save
-      setCurrentQuestion({
-        id: crypto.randomUUID(),
-        text: '',
-        type: 'multiple-choice',
-        options: [
-          { id: crypto.randomUUID(), text: '' },
-          { id: crypto.randomUUID(), text: '' },
-        ],
-        correctAnswerId: '',
-      });
-    }
-  };
-
-  const removeQuestion = (index: number) => {
-    const newQuestions = questions.filter((_, i) => i !== index);
-    setQuestions(newQuestions);
-  };
-
-  const startEditingQuestion = (index: number) => {
-    setEditingQuestionIndex(index);
-    setEditingQuestion({ ...questions[index] });
-  };
-
-  const cancelEditingQuestion = () => {
-    setEditingQuestionIndex(null);
-    setEditingQuestion(null);
-  };
-
-  const saveEditedQuestion = () => {
-    if (editingQuestionIndex !== null && editingQuestion) {
-      if (!validateQuestion(editingQuestion)) {
-        return;
-      }
-      
-      const newQuestions = [...questions];
-      newQuestions[editingQuestionIndex] = editingQuestion;
-      setQuestions(newQuestions);
-      setEditingQuestionIndex(null);
-      setEditingQuestion(null);
-      setError('');
-    }
-  };
-
-  const handleEditQuestionChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    if (!editingQuestion) return;
-    
-    if (e.target.name === 'type') {
-      const type = e.target.value as QuestionType;
-      setEditingQuestion({
-        ...editingQuestion,
-        type,
-        options: type === 'subjective' ? [] : editingQuestion.options,
-      });
-    } else {
-      setEditingQuestion({ ...editingQuestion, [e.target.name]: e.target.value });
-    }
-  };
-
-  const handleEditOptionChange = (index: number, value: string) => {
-    if (!editingQuestion) return;
-    
-    const newOptions = [...editingQuestion.options];
-    newOptions[index] = { ...newOptions[index], text: value };
-    setEditingQuestion({ ...editingQuestion, options: newOptions });
-  };
-
-  const addEditOption = () => {
-    if (!editingQuestion) return;
-    
-    setEditingQuestion({
-      ...editingQuestion,
-      options: [...editingQuestion.options, { id: crypto.randomUUID(), text: '' }],
-    });
-  };
-
-  const removeEditOption = (index: number) => {
-    if (!editingQuestion) return;
-    
-    const newOptions = editingQuestion.options.filter((_, i) => i !== index);
-    setEditingQuestion({ ...editingQuestion, options: newOptions });
-  };
-
-  const handleQuizData = async (quizData: Quiz) => {
-    // Add all questions from speech/image input to database and local state
-    if (quizData.questions.length > 0) {
-      setIsLoading(true);
-      setError('');
-      setSuccessMessage('');
-      
-      try {
-        for (const question of quizData.questions) {
-          await addQuestionToState(question, false);
-        }
-        
-        const count = quizData.questions.length;
-        setSuccessMessage(`Successfully added ${count} question${count > 1 ? 's' : ''} to your quiz`);
-        
-        // Clear success message after 4 seconds for multiple questions
-        setTimeout(() => setSuccessMessage(''), 4000);
-        
-      } catch (err) {
-        console.error('Failed to save questions from input mode:', err);
-        setError('Failed to save some questions. Please try again.');
-      } finally {
-        setIsLoading(false);
+      setSuccessMessage('Question added successfully!');
+      if (editingQuestionIndex !== null) {
+        cancelEditingQuestion();
+      } else {
+        // Reset for new question creation
+        setCurrentQuestion(createEmptyQuestion());
       }
     }
   };
 
-  const handleCompleteQuiz = () => {
+  const handleRemoveQuestion = async (index: number) => {
+    removeQuestion(index);
+    setSuccessMessage('Question removed successfully!');
+  };
+
+  const handleQuestionEdit = (index: number) => {
+    startEditingQuestion(index);
+    setCurrentQuestion(null); // Clear manual question when editing existing one
+    setInputMode('manual');
+  };
+
+  const handleFinishQuiz = async () => {
     if (questions.length === 0) {
-      setError('Add at least one question to complete the quiz');
+      setError('Please add at least one question to your quiz');
       return;
     }
-    
-    onComplete({ questions }, 3);
+    onComplete(null, 3); // Complete the quiz
+  };
+
+  const handleQuestionChange = (question: Question | null) => {
+    if (editingQuestionIndex !== null) {
+      // This should be handled by the editing question state, not here
+    } else {
+      // This is for new question creation
+      setCurrentQuestion(question);
+    }
+    setError(''); // Clear any existing errors
+  };
+
+  const handleSaveOrAdd = async () => {
+    if (editingQuestionIndex !== null && editingQuestion) {
+      // Save edited question
+      const saved = saveEditedQuestion();
+      if (saved) {
+        setCurrentQuestion(null);
+      }
+    } else if (currentQuestion) {
+      // Add new question
+      await handleAddQuestion(currentQuestion);
+    }
+  };
+
+  const handleCancel = () => {
+    if (editingQuestionIndex !== null) {
+      cancelEditingQuestion();
+      setCurrentQuestion(createEmptyQuestion()); // Reset to new question form
+    } else {
+      setCurrentQuestion(createEmptyQuestion()); // Reset new question form
+    }
+  };
+
+  // Get the question to display in the editor
+  const getDisplayQuestion = (): Question | null => {
+    if (editingQuestionIndex !== null && editingQuestion) {
+      return editingQuestion;
+    }
+    return currentQuestion;
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">{quizMetadata.title}</h2>
-        <p className="text-gray-600">{quizMetadata.description}</p>
-        <div className="mt-4 text-sm text-gray-500">
-          Questions added: {questions.length}
-        </div>
-      </div>
+    <div className="w-full max-w-6xl mx-auto space-y-6 px-4 sm:px-6">
+      <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-6 sm:p-8 rounded-2xl border border-gray-200">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Add Questions</h2>
+        
+        <p className="text-gray-600 mb-6 text-sm sm:text-base">
+          Choose how you'd like to add questions to your quiz. You can use multiple input methods.
+        </p>
 
-      {/* Input mode selector */}
-      <div className="mb-8 flex flex-wrap gap-3 justify-center">
-        <button
-          onClick={() => setInputMode('manual')}
-          className={`flex items-center gap-2 py-3 px-4 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
-            inputMode === 'manual' 
-              ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500'
-          }`}
-        >
-          <PenTool className="w-5 h-5" />
-          Manual Input
-        </button>
-        <button
-          onClick={() => setInputMode('speech')}
-          className={`flex items-center gap-2 py-3 px-4 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
-            inputMode === 'speech' 
-              ? 'bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500'
-          }`}
-        >
-          <Mic className="w-5 h-5" />
-          Voice Input
-        </button>
-        <button
-          onClick={() => setInputMode('image')}
-          className={`flex items-center gap-2 py-3 px-4 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
-            inputMode === 'image' 
-              ? 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500'
-          }`}
-        >
-          <Camera className="w-5 h-5" />
-          Image Input
-        </button>
-      </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
-          {error}
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-600 flex items-center gap-2">
-          <CheckCircle className="w-5 h-5" />
-          {successMessage}
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-600 flex items-center gap-2">
-          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Saving questions to database...
-        </div>
-      )}
-
-      {inputMode === 'speech' ? (
-        <SpeechQuizBuilder
-          onQuizData={handleQuizData}
-          isListening={isListening}
-          setIsListening={setIsListening}
+        {/* Input Mode Selector */}
+        <QuizInputModeSelector
+          currentMode={inputMode}
+          onModeChange={setInputMode}
         />
-      ) : inputMode === 'image' ? (
-        <ImageQuizBuilder onQuizData={handleQuizData} />
-      ) : (
-        <div className="bg-gray-50 rounded-2xl p-6 mb-8">
-          <h3 className="text-xl font-bold mb-6">Add New Question</h3>
-          
-          <div className="space-y-6">
-            <div>
-              <LaTeXInput
-                label="Question Text"
-                name="text"
-                value={currentQuestion.text}
-                onChange={(value) => setCurrentQuestion({ ...currentQuestion, text: value })}
-                placeholder="Enter question text (you can use LaTeX for math: $E = mc^2$)"
-              />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Question Type
-              </label>
-              <select
-                name="type"
-                value={currentQuestion.type}
-                onChange={handleQuestionChange}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="multiple-choice">Multiple Choice</option>
-                <option value="true-false">True/False</option>
-                <option value="subjective">Subjective</option>
-              </select>
-            </div>
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-center space-x-3">
+            <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+            <p className="text-green-700 font-medium text-sm sm:text-base">{successMessage}</p>
+          </div>
+        )}
 
-            {currentQuestion.type !== 'subjective' && (
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  Options
-                </label>
-                {currentQuestion.options.map((option, index) => (
-                  <div key={option.id} className="flex gap-4">
-                    <LaTeXInput
-                      name={`option-${index}`}
-                      value={option.text}
-                      onChange={(value) => handleOptionChange(index, value)}
-                      placeholder={`Option ${index + 1} (LaTeX supported: $\\frac{a}{b}$)`}
-                      className="flex-1"
-                    />
-                    <button
-                      onClick={() => removeOption(index)}
-                      className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                      disabled={currentQuestion.options.length <= 2}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-start space-x-3">
+            <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-red-700 font-medium text-sm sm:text-base">{error}</p>
+          </div>
+        )}
 
-                <div className="flex gap-4 items-end">
+        {/* Input Mode Content */}
+        <div className="mb-6">
+          {inputMode === 'manual' && (
+            <div className="bg-white p-4 sm:p-6 rounded-2xl border-2 border-gray-200 shadow-sm">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">
+                {editingQuestionIndex !== null ? 'Edit Question' : 'Create Question Manually'}
+              </h3>
+              
+              <p className="text-gray-600 mb-6 text-sm sm:text-base">
+                {editingQuestionIndex !== null 
+                  ? 'Make changes to your question below.'
+                  : 'Fill out the form below to create a new question with LaTeX support for mathematical expressions.'
+                }
+              </p>
+
+              {getDisplayQuestion() && (
+                <QuestionEditor
+                  question={getDisplayQuestion()!}
+                  onChange={handleQuestionChange}
+                  error={error}
+                />
+              )}
+
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4 sm:space-y-0">
                   <button
-                    onClick={addOption}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                    onClick={handleCancel}
+                    className="w-full sm:w-auto px-6 py-3 text-gray-600 hover:text-gray-800 bg-white border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium"
                   >
-                    Add Option
+                    Cancel
                   </button>
-
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Correct Answer
-                    </label>
-                    <select
-                      value={currentQuestion.correctAnswerId}
-                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswerId: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select correct answer</option>
-                      {currentQuestion.options.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.text || `Option ${currentQuestion.options.indexOf(option) + 1}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  
+                  <button
+                    onClick={handleSaveOrAdd}
+                    disabled={isLoading}
+                    className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>{editingQuestionIndex !== null ? 'Saving...' : 'Adding...'}</span>
+                      </>
+                    ) : (
+                      <span>{editingQuestionIndex !== null ? 'Save Changes' : 'Add Question'}</span>
+                    )}
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {currentQuestion.type === 'subjective' && (
-              <div>
-                <LaTeXInput
-                  label="Sample Answer (optional)"
-                  name="sampleAnswer"
-                  value={currentQuestion.sampleAnswer || ''}
-                  onChange={(value) => setCurrentQuestion({ ...currentQuestion, sampleAnswer: value })}
-                  placeholder="Enter a sample answer (LaTeX supported for equations)"
-                  multiline={true}
-                  rows={3}
-                />
-              </div>
-            )}
+          {inputMode === 'image' && (
+            <ImageQuizBuilder
+              onQuestionsExtracted={async (questions: Question[]) => {
+                for (const question of questions) {
+                  await handleAddQuestion(question);
+                }
+                setSuccessMessage(`${questions.length} question${questions.length !== 1 ? 's' : ''} added from images!`);
+              }}
+              isLoading={isLoading}
+            />
+          )}
 
+          {inputMode === 'speech' && (
+            <SpeechQuizBuilder
+              onQuestionAdded={async (question: Question) => {
+                await handleAddQuestion(question);
+                setSuccessMessage('Question added from speech!');
+              }}
+              isLoading={isLoading}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Questions List */}
+      {questions.length > 0 && (
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border-2 border-gray-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <div>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                Quiz Questions ({questions.length})
+              </h3>
+              <p className="text-gray-600 text-sm sm:text-base">
+                Review and manage your questions
+              </p>
+            </div>
+            
             <button
-              onClick={addQuestion}
-              disabled={isLoading}
-              className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-400"
+              onClick={handleFinishQuiz}
+              disabled={isLoading || questions.length === 0}
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
             >
-              {isLoading ? 'Adding...' : 'Add Question'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Finishing...</span>
+                </>
+              ) : (
+                <span>Finish Quiz ({questions.length} questions)</span>
+              )}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Display added questions */}
-      {questions.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <h3 className="text-xl font-bold mb-6">Added Questions ({questions.length})</h3>
+          
           <div className="space-y-4">
             {questions.map((question, index) => (
-              <div key={question.id} className="border border-gray-200 rounded-lg p-4">
-                {editingQuestionIndex === index ? (
-                  // Edit mode
-                  <div className="space-y-4">
-                    <div>
-                      <LaTeXInput
-                        label="Question Text"
-                        name="text"
-                        value={editingQuestion?.text || ''}
-                        onChange={(value) => setEditingQuestion(editingQuestion ? { ...editingQuestion, text: value } : null)}
-                        placeholder="Enter question text (you can use LaTeX for math: $E = mc^2$)"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Question Type
-                      </label>
-                      <select
-                        name="type"
-                        value={editingQuestion?.type}
-                        onChange={handleEditQuestionChange}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="multiple-choice">Multiple Choice</option>
-                        <option value="true-false">True/False</option>
-                        <option value="subjective">Subjective</option>
-                      </select>
-                    </div>
-
-                    {editingQuestion?.type !== 'subjective' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Options
-                        </label>
-                        <div className="space-y-2">
-                          {editingQuestion?.options.map((option, optIndex) => (
-                            <div key={option.id} className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name="correctAnswer"
-                                checked={editingQuestion.correctAnswerId === option.id}
-                                onChange={() => setEditingQuestion({ ...editingQuestion, correctAnswerId: option.id })}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                              />
-                              <LaTeXInput
-                                name={`option-${optIndex}`}
-                                value={option.text}
-                                onChange={(value) => handleEditOptionChange(optIndex, value)}
-                                placeholder={`Option ${optIndex + 1} (use LaTeX for math: $x^2$)`}
-                                className="flex-1"
-                              />
-                              {editingQuestion.options.length > 2 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeEditOption(optIndex)}
-                                  className="p-2 text-red-500 hover:text-red-700"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={addEditOption}
-                            className="mt-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                          >
-                            Add Option
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={saveEditedQuestion}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                      >
-                        <Save className="w-4 h-4" />
-                        Save
-                      </button>
-                      <button
-                        onClick={cancelEditingQuestion}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                      >
-                        <X className="w-4 h-4" />
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  // Display mode
-                  <div>
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium text-gray-900">Question {index + 1}</h4>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => startEditingQuestion(index)}
-                          className="p-1 text-blue-500 hover:text-blue-700"
-                          title="Edit question"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => removeQuestion(index)}
-                          className="p-1 text-red-500 hover:text-red-700"
-                          title="Remove question"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mb-3">
-                      <LaTeXRenderer content={question.text} className="text-gray-800" />
-                    </div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      Type: <span className="capitalize">{question.type.replace('-', ' ')}</span>
-                    </div>
-                    {question.options.length > 0 && (
-                      <div className="space-y-1">
-                        {question.options.map((option, optIndex) => (
-                          <div key={option.id} className="flex items-center gap-2 text-sm">
-                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-                              question.correctAnswerId === option.id 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-600'
-                            }`}>
-                              {String.fromCharCode(65 + optIndex)}
-                            </span>
-                            <LaTeXRenderer content={option.text} className="text-gray-700" />
-                            {question.correctAnswerId === option.id && (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+              <div key={question.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                <QuestionDisplay
+                  question={question}
+                  index={index}
+                  onEdit={handleQuestionEdit}
+                  onRemove={handleRemoveQuestion}
+                  showActions={true}
+                />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Complete Quiz Button */}
-      <div className="flex justify-end">
+      {/* Navigation */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6">
         <button
-          onClick={handleCompleteQuiz}
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+          onClick={onBack}
+          className="w-full sm:w-auto px-6 py-3 text-gray-600 hover:text-gray-800 bg-white border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium"
         >
-          <CheckCircle className="w-5 h-5" />
-          Complete Quiz
+          ← Back to Quiz Details
         </button>
+        
+        {questions.length > 0 && (
+          <button
+            onClick={handleFinishQuiz}
+            disabled={isLoading}
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Finishing Quiz...</span>
+              </>
+            ) : (
+              <span>Complete Quiz with {questions.length} Questions</span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
-};
-
-export default QuizQuestionsStep; 
+} 

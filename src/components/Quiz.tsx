@@ -255,8 +255,8 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
           ) : (
             <div>
               <textarea
-                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                rows={6}
+                className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none text-sm sm:text-base max-w-full"
+                rows={4}
                 placeholder="Enter your answer here..."
                 value={responses.find(r => r.questionId === currentQuestion.id)?.textAnswer || ''}
                 onChange={(e) => handleTextAnswer(e.target.value)}
