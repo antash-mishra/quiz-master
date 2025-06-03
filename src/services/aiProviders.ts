@@ -40,6 +40,7 @@ For subjective questions, include a "sampleAnswer" field but no options or corre
 
 const SPEECH_PROMPT = `
 Convert this spoken quiz question into a structured format.
+If the transcription has some issues, try to fix them.
 If the content involves mathematics, science, or technical subjects, use LaTeX notation:
 - Use $...$ for inline math (e.g., $x^2$, $\\pi$, $E = mc^2$)
 - Use $$...$$ for display math (e.g., $$\\frac{a}{b}$$, $$\\int_0^1 x dx$$)

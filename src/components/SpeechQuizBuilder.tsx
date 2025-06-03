@@ -232,39 +232,39 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
 
   return (
     <div className="space-y-8">
-      <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-8 rounded-2xl border border-purple-100">
+      <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 sm:p-8 rounded-2xl border border-purple-100">
         <div className="flex items-center space-x-3 mb-6">
           <div className="p-3 bg-purple-500 rounded-xl">
             <Volume2 className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
               Convert Speech to Questions
             </h3>
-            <p className="text-purple-700 mt-1">
+            <p className="text-purple-700 mt-1 text-sm sm:text-base">
               Record audio or upload files and let AI create structured questions
             </p>
           </div>
         </div>
         
-        <p className="text-gray-700 mb-8 text-lg">
+        <p className="text-gray-700 mb-8 text-base sm:text-lg">
           Use high-quality audio recording or upload audio files for accurate transcription. 
           Powered by Groq's Whisper for fast and accurate speech-to-text conversion.
         </p>
 
         {/* Recording Controls */}
         <div className="mb-8">
-          <div className="bg-white rounded-2xl border-2 border-purple-200 p-8">
+          <div className="bg-white rounded-2xl border-2 border-purple-200 p-4 sm:p-8">
             <div className="text-center mb-6">
-              <div className={`p-6 rounded-full w-32 h-32 mx-auto mb-4 flex items-center justify-center transition-all duration-300 ${
+              <div className={`p-4 sm:p-6 rounded-full w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 flex items-center justify-center transition-all duration-300 ${
                 isRecording 
                   ? 'bg-red-500 animate-pulse shadow-lg shadow-red-200' 
                   : 'bg-purple-100 hover:bg-purple-200'
               }`}>
                 {isRecording ? (
-                  <MicOff className="h-16 w-16 text-white" />
+                  <MicOff className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
                 ) : (
-                  <Mic className="h-16 w-16 text-purple-600" />
+                  <Mic className="h-12 w-12 sm:h-16 sm:w-16 text-purple-600" />
                 )}
               </div>
               
@@ -285,11 +285,12 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
               )}
               
               <div className="space-y-4">
-                <div className="flex items-center justify-center space-x-4">
+                {/* Mobile-friendly button layout */}
+                <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
                   <button
                     onClick={startRecording}
                     disabled={isRecording || isTranscribing || isProcessing}
-                    className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
                   >
                     <Mic className="h-5 w-5" />
                     <span>Start Recording</span>
@@ -298,7 +299,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                   <button
                     onClick={stopRecording}
                     disabled={!isRecording}
-                    className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
                   >
                     <Square className="h-5 w-5" />
                     <span>Stop & Transcribe</span>
@@ -307,7 +308,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                   <button
                     onClick={clearTranscript}
                     disabled={isRecording || isTranscribing}
-                    className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
                   >
                     <span>Clear</span>
                   </button>
@@ -316,7 +317,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                 {/* File Upload */}
                 <div className="border-t border-gray-200 pt-4">
                   <p className="text-gray-600 text-sm mb-3">Or upload an audio file:</p>
-                  <label className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+                  <label className="inline-flex items-center justify-center space-x-2 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
                     <Upload className="h-4 w-4" />
                     <span>Upload Audio File</span>
                     <input
@@ -327,7 +328,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                       className="hidden"
                     />
                   </label>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-gray-500 mt-2 text-center sm:text-left">
                     Supports MP3, WAV, M4A, WebM, OGG (max 25MB)
                   </p>
                 </div>
@@ -341,7 +342,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                   <FileAudio className="h-5 w-5 text-purple-600" />
                   <h4 className="font-semibold text-gray-900">Transcript:</h4>
                 </div>
-                <p className="text-gray-700 italic">"{transcript}"</p>
+                <p className="text-gray-700 italic break-words">"{transcript}"</p>
               </div>
             )}
           </div>
@@ -351,7 +352,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
         <button
           onClick={handleProcessSpeech}
           disabled={isProcessing || !transcript.trim() || !geminiApiKey.trim()}
-          className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+          className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
         >
           {isProcessing ? (
             <>
@@ -370,7 +371,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
         {error && (
           <div className="mt-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-start space-x-3">
             <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-700 font-medium">{error}</p>
+            <p className="text-red-700 font-medium break-words">{error}</p>
           </div>
         )}
 
@@ -380,7 +381,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
             <AlertCircle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-yellow-700 font-medium">Groq API Key Required</p>
-              <p className="text-yellow-600 text-sm mt-1">
+              <p className="text-yellow-600 text-sm mt-1 break-words">
                 Please add your Groq API key to the environment variables as VITE_GROQ_API_KEY to use speech transcription.
               </p>
             </div>
@@ -390,22 +391,22 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       
       {/* Generated Question */}
       {currentQuestion && (
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-2xl border border-green-100">
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 sm:p-8 rounded-2xl border border-green-100">
           <div className="flex items-center space-x-3 mb-6">
             <div className="p-3 bg-green-500 rounded-xl">
               <CheckCircle className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
                 Generated Question
               </h3>
-              <p className="text-green-700 mt-1">
+              <p className="text-green-700 mt-1 text-sm sm:text-base">
                 Review and edit the question before adding to your quiz
               </p>
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-xl border border-green-200 shadow-sm">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-green-200 shadow-sm">
             <QuestionEditor
               question={currentQuestion}
               onChange={setCurrentQuestion}
@@ -413,11 +414,11 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
             />
           </div>
           
-          <div className="mt-8 pt-6 border-t border-green-200">
+          <div className="mt-6 sm:mt-8 pt-6 border-t border-green-200">
             <button
               onClick={handleAddQuestion}
               disabled={isLoading || !currentQuestion}
-              className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+              className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
             >
               {isLoading ? (
                 <>
