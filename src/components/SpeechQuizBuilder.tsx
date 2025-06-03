@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Play, Pause, Square, AlertCircle, CheckCircle, Loader2, Plus, Volume2, RotateCcw } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Mic, MicOff, Square, AlertCircle, CheckCircle, Loader2, Plus, Volume2, Upload, FileAudio } from 'lucide-react';
 import { Question } from '../types';
 import { AI_PROVIDERS, AIProvider } from '../services/aiProviders';
 import { useAIProcessing } from '../hooks/useAIProcessing';
-import { QuestionEditor, QuestionDisplay } from './shared';
-import '../types/speech.d.ts';
+import { QuestionEditor } from './shared';
+import { GroqTranscriptionService, AudioRecorder } from '../services/groqTranscription';
 
 interface SpeechQuizBuilderProps {
   onQuestionAdded: (question: Question) => void;
@@ -14,270 +14,170 @@ interface SpeechQuizBuilderProps {
 export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: SpeechQuizBuilderProps) {
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
-  const [recognitionActive, setRecognitionActive] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [isRetrying, setIsRetrying] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [error, setError] = useState('');
   
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const transcriptionServiceRef = useRef<GroqTranscriptionService | null>(null);
+  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Detect if we're on mobile
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // Get API keys from environment
+  const groqApiKey = import.meta.env.VITE_GROQ_API_KEY || '';
+  const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
-  // Use Gemini by default with API key from environment variables
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-  const provider: AIProvider['name'] = 'gemini';
+  // Use Gemini for question processing
+  const [aiState, aiActions] = useAIProcessing({ 
+    apiKey: geminiApiKey, 
+    provider: 'gemini' as AIProvider['name'] 
+  });
+  const { isProcessing } = aiState;
+  const { processSpeech } = aiActions;
 
-  const [aiState, aiActions] = useAIProcessing({ apiKey, provider });
-  const { isProcessing, error } = aiState;
-  const { processSpeech, setError } = aiActions;
-
-  // Initialize speech recognition
+  // Initialize services
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      
-      const recognition = recognitionRef.current;
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      recognition.maxAlternatives = 1;
-
-      // Mobile-specific configuration
-      if (isMobile) {
-        // On mobile, set these properties to prevent auto-stopping
-        recognition.continuous = false;
-        recognition.interimResults = false; // Less processing on mobile
-        recognition.lang = 'en-US';
-        // Some mobile browsers respect these timeout settings
-        if ('grammars' in recognition) {
-          recognition.grammars = new (window as any).SpeechGrammarList();
-        }
-      }
-
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
-        }
-        if (finalTranscript) {
-          setTranscript(prev => prev + ' ' + finalTranscript);
-        }
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        
-        // Handle different types of errors with appropriate messages and actions
-        switch (event.error) {
-          case 'aborted':
-            // Don't show aborted errors as they're usually intentional
-            break;
-          case 'network':
-            if (retryCount < 3 && isRecording) {
-              setIsRetrying(true);
-              setError(`Network error (retry ${retryCount + 1}/3): Attempting to reconnect...`);
-              setRetryCount(prev => prev + 1);
-              
-              // Retry after 2 seconds
-              retryTimeoutRef.current = setTimeout(() => {
-                if (isRecording && recognitionRef.current) {
-                  try {
-                    setIsRetrying(false);
-                    recognitionRef.current.start();
-                  } catch (error) {
-                    console.error('Error retrying speech recognition:', error);
-                    setIsRetrying(false);
-                    setError('Failed to restart speech recognition after network error.');
-                    setIsRecording(false);
-                    setRecognitionActive(false);
-                  }
-                }
-              }, 2000);
-              return; // Don't stop recording, we're retrying
-            } else {
-              setError('Network error: Please check your internet connection and try again. Speech recognition requires an internet connection.');
-            }
-            break;
-          case 'not-allowed':
-            setError('Microphone access denied. Please allow microphone permissions and refresh the page.');
-            break;
-          case 'no-speech':
-            setError('No speech detected. Please speak clearly and try again.');
-            // Don't stop recording for no-speech errors, just continue listening
-            return;
-          case 'audio-capture':
-            setError('Microphone not found or not working. Please check your microphone.');
-            break;
-          case 'service-not-allowed':
-            setError('Speech recognition service not available. Please try again later.');
-            break;
-          default:
-            setError(`Speech recognition error: ${event.error}. Please try again.`);
-        }
-        
-        setIsRecording(false);
-        setRecognitionActive(false);
-        setIsRetrying(false);
-      };
-
-      recognition.onend = () => {
-        // Only stop if the user intentionally stopped or there was an error
-        // If recognition ends unexpectedly while recording, restart it
-        if (isRecording && recognitionActive) {
-          try {
-            // Use shorter timeout for mobile to restart faster
-            const restartDelay = isMobile ? 50 : 100;
-            setTimeout(() => {
-              if (isRecording && recognitionRef.current) {
-                console.log('Auto-restarting speech recognition...', isMobile ? '(mobile)' : '(desktop)');
-                recognitionRef.current.start();
-              }
-            }, restartDelay);
-          } catch (error) {
-            console.error('Error restarting speech recognition:', error);
-            setIsRecording(false);
-            setRecognitionActive(false);
-          }
-        } else {
-          setIsRecording(false);
-          setRecognitionActive(false);
-        }
-      };
-
-      recognition.onstart = () => {
-        setRecognitionActive(true);
-      };
-    } else {
-      setError('Speech recognition is not supported in this browser');
+    if (groqApiKey) {
+      transcriptionServiceRef.current = new GroqTranscriptionService(groqApiKey);
     }
-    
+    audioRecorderRef.current = new AudioRecorder();
+
     return () => {
-      if (recognitionRef.current) {
-        try {
-          // Stop gracefully instead of aborting
-          if (recognitionActive) {
-            recognitionRef.current.stop();
-          }
-          setRecognitionActive(false);
-        } catch (error) {
-          // Ignore cleanup errors
-          console.log('Speech recognition cleanup:', error);
-        }
+      // Cleanup on unmount
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.destroy();
       }
-      
-      // Clear retry timeout
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
       }
     };
-  }, [setError, recognitionActive]);
+  }, [groqApiKey]);
 
-  const startRecording = () => {
-    if (recognitionRef.current && !isRecording && !recognitionActive && !isRetrying) {
+  const startRecording = async () => {
+    if (!audioRecorderRef.current || !transcriptionServiceRef.current) {
+      setError('Recording services not available. Please check your Groq API key.');
+      return;
+    }
+
+    if (!groqApiKey.trim()) {
+      setError('Groq API key is required for transcription. Please add VITE_GROQ_API_KEY to your environment variables.');
+      return;
+    }
+
+    try {
       setError('');
-      setRetryCount(0); // Reset retry count
+      setIsRecording(true);
+      setRecordingDuration(0);
       
-      // Show mobile-specific message
-      if (isMobile) {
-        console.log('Starting speech recognition on mobile device');
-      }
+      await audioRecorderRef.current.startRecording();
       
-      try {
-        setIsRecording(true);
-        recognitionRef.current.start();
-      } catch (error) {
-        console.error('Error starting speech recognition:', error);
-        setError(`Failed to start speech recognition${isMobile ? ' (mobile)' : ''}`);
-        setIsRecording(false);
-        setRecognitionActive(false);
-      }
-    }
-  };
-
-  const stopRecording = () => {
-    if (recognitionRef.current && (isRecording || recognitionActive)) {
-      // First set recording to false to prevent restart in onend handler
+      // Start duration counter
+      durationIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error('Error starting recording:', error);
+      setError(`Failed to start recording: ${error.message}`);
       setIsRecording(false);
-      setIsRetrying(false);
-      
-      // Clear any pending retry
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
-      }
-      
-      try {
-        recognitionRef.current.stop();
-      } catch (error) {
-        console.error('Error stopping speech recognition:', error);
-      }
-      
-      // Ensure state is cleared
-      setRecognitionActive(false);
-      setRetryCount(0);
     }
   };
 
-  const restartRecording = () => {
-    // Stop current recording
-    stopRecording();
-    
-    // Clear transcript and errors
-    setTranscript('');
-    setError('');
-    setCurrentQuestion(null);
-    
-    // Start new recording after a brief delay
-    setTimeout(() => {
-      startRecording();
-    }, 200);
+  const stopRecording = async () => {
+    if (!audioRecorderRef.current || !transcriptionServiceRef.current) {
+      setError('Recording services not available');
+      return;
+    }
+
+    try {
+      setIsRecording(false);
+      
+      // Stop duration counter
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+
+      setIsTranscribing(true);
+      setError('');
+
+      // Stop recording and get audio blob
+      const audioBlob = await audioRecorderRef.current.stopRecording();
+      
+      // Transcribe audio using Groq Whisper
+      const transcribedText = await transcriptionServiceRef.current.transcribeAudio(audioBlob);
+      
+      if (transcribedText.trim()) {
+        setTranscript(transcribedText.trim());
+      } else {
+        setError('No speech detected in the recording. Please try again.');
+      }
+      
+    } catch (error: any) {
+      console.error('Error stopping recording or transcribing:', error);
+      setError(`Transcription failed: ${error.message}`);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !transcriptionServiceRef.current) {
+      return;
+    }
+
+    // Check file size (max 25MB for Groq)
+    if (file.size > 25 * 1024 * 1024) {
+      setError('File too large. Maximum size is 25MB.');
+      return;
+    }
+
+    // Check file type
+    const allowedTypes = ['audio/mp3', 'audio/wav', 'audio/m4a', 'audio/webm', 'audio/ogg'];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|m4a|webm|ogg)$/i)) {
+      setError('Unsupported file type. Please use MP3, WAV, M4A, WebM, or OGG files.');
+      return;
+    }
+
+    try {
+      setIsTranscribing(true);
+      setError('');
+      
+      const transcribedText = await transcriptionServiceRef.current.transcribeAudio(file);
+      
+      if (transcribedText.trim()) {
+        setTranscript(transcribedText.trim());
+      } else {
+        setError('No speech detected in the uploaded file.');
+      }
+      
+    } catch (error: any) {
+      console.error('Error transcribing uploaded file:', error);
+      setError(`Transcription failed: ${error.message}`);
+    } finally {
+      setIsTranscribing(false);
+    }
+
+    // Reset file input
+    event.target.value = '';
   };
 
   const clearTranscript = () => {
     setTranscript('');
     setCurrentQuestion(null);
     setError('');
-  };
-
-  const playTranscript = () => {
-    if (!transcript.trim()) {
-      setError('No transcript to play');
-      return;
-    }
-
-    if (isPlaying) {
-      speechSynthesis.cancel();
-      setIsPlaying(false);
-      return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance(transcript);
-    synthRef.current = utterance;
-    
-    utterance.onend = () => {
-      setIsPlaying(false);
-    };
-    
-    utterance.onerror = () => {
-      setError('Error playing speech');
-      setIsPlaying(false);
-    };
-
-    setIsPlaying(true);
-    speechSynthesis.speak(utterance);
+    setRecordingDuration(0);
   };
 
   const handleProcessSpeech = async () => {
     if (!transcript.trim()) {
-      setError('Please record some speech first');
+      setError('Please record or upload audio first');
+      return;
+    }
+
+    if (!geminiApiKey.trim()) {
+      setError('Gemini API key is required for question processing.');
       return;
     }
 
@@ -324,6 +224,12 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
     return true;
   };
 
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="space-y-8">
       <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-8 rounded-2xl border border-purple-100">
@@ -336,29 +242,18 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
               Convert Speech to Questions
             </h3>
             <p className="text-purple-700 mt-1">
-              Speak your questions and let AI structure them
+              Record audio or upload files and let AI create structured questions
             </p>
           </div>
         </div>
         
         <p className="text-gray-700 mb-8 text-lg">
-          Speak your quiz questions naturally and AI will convert them into structured multiple-choice format. 
-          You can review and edit the generated questions before adding them to your quiz.
-          {isMobile && (
-            <span className="block mt-2 text-blue-600 font-medium">
-              📱 Mobile tip: Keep speaking continuously for best results. The app will automatically restart if needed.
-              <br />
-              💡 Use the "Restart" button to clear and start fresh anytime.
-            </span>
-          )}
+          Use high-quality audio recording or upload audio files for accurate transcription. 
+          Powered by Groq's Whisper for fast and accurate speech-to-text conversion.
         </p>
 
-        {/* Speech Recording */}
+        {/* Recording Controls */}
         <div className="mb-8">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Record Your Question
-          </label>
-          
           <div className="bg-white rounded-2xl border-2 border-purple-200 p-8">
             <div className="text-center mb-6">
               <div className={`p-6 rounded-full w-32 h-32 mx-auto mb-4 flex items-center justify-center transition-all duration-300 ${
@@ -369,15 +264,31 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                 {isRecording ? (
                   <MicOff className="h-16 w-16 text-white" />
                 ) : (
-                  <Mic className={`h-16 w-16 ${isRecording ? 'text-white' : 'text-purple-600'}`} />
+                  <Mic className="h-16 w-16 text-purple-600" />
                 )}
               </div>
+              
+              {isRecording && (
+                <div className="mb-4">
+                  <p className="text-red-600 font-medium text-lg">🔴 Recording...</p>
+                  <p className="text-gray-600 text-sm">Duration: {formatDuration(recordingDuration)}</p>
+                </div>
+              )}
+
+              {isTranscribing && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-center space-x-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                    <p className="text-blue-600 font-medium">Transcribing audio...</p>
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-4">
                 <div className="flex items-center justify-center space-x-4">
                   <button
                     onClick={startRecording}
-                    disabled={isRecording || isProcessing || isRetrying}
+                    disabled={isRecording || isTranscribing || isProcessing}
                     className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
                   >
                     <Mic className="h-5 w-5" />
@@ -385,50 +296,65 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
                   </button>
                   
                   <button
-                    onClick={restartRecording}
-                    disabled={isProcessing || isRetrying}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
-                  >
-                    <RotateCcw className="h-5 w-5" />
-                    <span>Restart</span>
-                  </button>
-                  
-                <button
                     onClick={stopRecording}
-                    disabled={!isRecording && !isRetrying}
+                    disabled={!isRecording}
                     className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
                   >
                     <Square className="h-5 w-5" />
-                    <span>Stop Recording</span>
-                </button>
+                    <span>Stop & Transcribe</span>
+                  </button>
+
+                  <button
+                    onClick={clearTranscript}
+                    disabled={isRecording || isTranscribing}
+                    className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                  >
+                    <span>Clear</span>
+                  </button>
                 </div>
-                
-                {(isRecording || isRetrying) && (
-                  <p className={`font-medium animate-pulse ${isRetrying ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {isRetrying ? '🔄 Reconnecting... Please wait' : '🔴 Recording... Speak your question clearly'}
+
+                {/* File Upload */}
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-gray-600 text-sm mb-3">Or upload an audio file:</p>
+                  <label className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+                    <Upload className="h-4 w-4" />
+                    <span>Upload Audio File</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      onChange={handleFileUpload}
+                      disabled={isRecording || isTranscribing || isProcessing}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Supports MP3, WAV, M4A, WebM, OGG (max 25MB)
                   </p>
-                )}
+                </div>
               </div>
             </div>
             
             {/* Transcript Display */}
             {transcript && (
               <div className="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Transcript:</h4>
+                <div className="flex items-center space-x-2 mb-2">
+                  <FileAudio className="h-5 w-5 text-purple-600" />
+                  <h4 className="font-semibold text-gray-900">Transcript:</h4>
+                </div>
                 <p className="text-gray-700 italic">"{transcript}"</p>
               </div>
             )}
           </div>
-            </div>
+        </div>
           
         {/* Process Button */}
-            <button
+        <button
           onClick={handleProcessSpeech}
-          disabled={isProcessing || !transcript.trim() || !apiKey.trim()}
+          disabled={isProcessing || !transcript.trim() || !geminiApiKey.trim()}
           className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
-            >
-              {isProcessing ? (
-                <>
+        >
+          {isProcessing ? (
+            <>
               <Loader2 className="h-6 w-6 animate-spin" />
               <span>Processing Speech...</span>
             </>
@@ -447,7 +373,20 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
             <p className="text-red-700 font-medium">{error}</p>
           </div>
         )}
-        </div>
+
+        {/* API Key Warning */}
+        {!groqApiKey.trim() && (
+          <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl flex items-start space-x-3">
+            <AlertCircle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-yellow-700 font-medium">Groq API Key Required</p>
+              <p className="text-yellow-600 text-sm mt-1">
+                Please add your Groq API key to the environment variables as VITE_GROQ_API_KEY to use speech transcription.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
       
       {/* Generated Question */}
       {currentQuestion && (
@@ -472,7 +411,7 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
               onChange={setCurrentQuestion}
               error={error}
             />
-            </div>
+          </div>
           
           <div className="mt-8 pt-6 border-t border-green-200">
             <button
@@ -497,4 +436,4 @@ export default function SpeechQuizBuilder({ onQuestionAdded, isLoading }: Speech
       )}
     </div>
   );
-} 
+}
