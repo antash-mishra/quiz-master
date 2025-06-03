@@ -5,9 +5,10 @@ import { InlineMath, BlockMath } from 'react-katex';
 interface LaTeXRendererProps {
   content: string;
   className?: string;
+  inline?: boolean;
 }
 
-const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({ content, className = "" }) => {
+const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({ content, className = "", inline = false }) => {
   // Parse and render LaTeX content
   const renderLatexContent = (text: string) => {
     if (!text) return null;
@@ -18,25 +19,31 @@ const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({ content, className = "" }
       
       return parts.map((part, index) => {
         if (part.startsWith('$$') && part.endsWith('$$')) {
-          // Display math
+          // Display math - force inline math for inline rendering
           const mathContent = part.slice(2, -2);
-          return <BlockMath key={index} math={mathContent} />;
+          return inline ? 
+            <InlineMath key={index} math={mathContent} /> : 
+            <BlockMath key={index} math={mathContent} />;
         } else if (part.startsWith('$') && part.endsWith('$')) {
           // Inline math
           const mathContent = part.slice(1, -1);
           return <InlineMath key={index} math={mathContent} />;
         } else {
-          // Regular text - preserve line breaks
-          return (
-            <span key={index}>
-              {part.split('\n').map((line, lineIndex, array) => (
-                <React.Fragment key={lineIndex}>
-                  {line}
-                  {lineIndex < array.length - 1 && <br />}
-                </React.Fragment>
-              ))}
-            </span>
-          );
+          // Regular text - preserve line breaks only if not inline
+          if (inline) {
+            return <span key={index}>{part}</span>;
+          } else {
+            return (
+              <span key={index}>
+                {part.split('\n').map((line, lineIndex, array) => (
+                  <React.Fragment key={lineIndex}>
+                    {line}
+                    {lineIndex < array.length - 1 && <br />}
+                  </React.Fragment>
+                ))}
+              </span>
+            );
+          }
         }
       });
     } catch (error) {
@@ -48,10 +55,13 @@ const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({ content, className = "" }
     }
   };
 
+  // Use span for inline rendering, div for block rendering
+  const WrapperComponent = inline ? 'span' : 'div';
+
   return (
-    <div className={`latex-content ${className}`}>
+    <WrapperComponent className={`latex-content ${className}`}>
       {renderLatexContent(content)}
-    </div>
+    </WrapperComponent>
   );
 };
 

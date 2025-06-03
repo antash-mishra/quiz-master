@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getStudentResults } from '../lib/db';
 import LaTeXRenderer from './LaTeXRenderer';
 
@@ -15,7 +16,7 @@ interface Result {
   timestamp: string;
 }
 
-const QuizResults: React.FC<QuizResultsProps> = ({ studentId, studentName }) => {
+const QuizResultsContent: React.FC<QuizResultsProps> = ({ studentId, studentName }) => {
   const [results, setResults] = useState<Result[]>([]);
   const [error, setError] = useState('');
 
@@ -34,6 +35,7 @@ const QuizResults: React.FC<QuizResultsProps> = ({ studentId, studentName }) => 
   };
 
   const calculateScore = () => {
+    if (results.length === 0) return 0;
     const correctAnswers = results.filter(r => r.is_correct).length;
     return (correctAnswers / results.length) * 100;
   };
@@ -43,6 +45,23 @@ const QuizResults: React.FC<QuizResultsProps> = ({ studentId, studentName }) => 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (results.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Quiz Results</h1>
+          <p className="text-gray-600 mb-6">No quiz results found for {studentName}.</p>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Take a Quiz
+          </button>
         </div>
       </div>
     );
@@ -101,7 +120,7 @@ const QuizResults: React.FC<QuizResultsProps> = ({ studentId, studentName }) => 
 
         <div className="mt-8 text-center">
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => window.location.href = '/'}
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
             Take Another Quiz
@@ -110,6 +129,31 @@ const QuizResults: React.FC<QuizResultsProps> = ({ studentId, studentName }) => 
       </div>
     </div>
   );
+};
+
+// Wrapper component that gets data from navigation state
+const QuizResults: React.FC = () => {
+  const location = useLocation();
+  const state = location.state as { studentId: string; studentName: string } | null;
+
+  // Redirect to home if no state is provided
+  if (!state || !state.studentId || !state.studentName) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+          <p className="text-red-600">No quiz results found. Please complete a quiz first.</p>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="mt-4 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <QuizResultsContent studentId={state.studentId} studentName={state.studentName} />;
 };
 
 export default QuizResults;

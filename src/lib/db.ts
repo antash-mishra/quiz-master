@@ -21,6 +21,20 @@ export interface Option {
   text: string;
 }
 
+// Helper function to map database types back to frontend types
+const mapQuestionTypeFromDB = (dbType: string): string => {
+  switch (dbType) {
+    case 'multiple_choice':
+      return 'multiple-choice';
+    case 'true_false':
+      return 'true-false';
+    case 'text':
+      return 'subjective';
+    default:
+      return dbType;
+  }
+};
+
 const client = createClient({
   url: 'libsql://quizmaster-ants.aws-ap-south-1.turso.io',
   authToken: import.meta.env.VITE_DB_AUTH_TOKEN
@@ -154,6 +168,47 @@ export async function saveQuiz(quiz: Quiz) {
   return quiz.id;
 }
 
+export async function saveQuizMetadata(quiz: { id: string; title: string; description?: string }) {
+  await client.execute({
+    sql: 'INSERT INTO quizzes (id, title, description) VALUES (?, ?, ?)',
+    args: [quiz.id, quiz.title, quiz.description || null]
+  });
+  return quiz.id;
+}
+
+export async function updateQuizMetadata(quiz: { id: string; title: string; description?: string }) {
+  await client.execute({
+    sql: 'UPDATE quizzes SET title = ?, description = ? WHERE id = ?',
+    args: [quiz.title, quiz.description || null, quiz.id]
+  });
+  return quiz.id;
+}
+
+export async function addQuestionToQuiz(quizId: string, question: Question) {
+  await client.execute({
+    sql: 'INSERT INTO questions (id, quiz_id, text, type, correct_answer_id, sample_answer) VALUES (?, ?, ?, ?, ?, ?)',
+    args: [question.id, quizId, question.text, question.type, question.correctAnswerId || null, question.sampleAnswer || null]
+  });
+
+  for (const option of question.options) {
+    await client.execute({
+      sql: 'INSERT INTO options (id, question_id, text) VALUES (?, ?, ?)',
+      args: [option.id, question.id, option.text]
+    });
+  }
+
+  return question.id;
+}
+
+export async function getQuizMetadata(quizId: string) {
+  const result = await client.execute({
+    sql: 'SELECT * FROM quizzes WHERE id = ?',
+    args: [quizId]
+  });
+  
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
+
 export async function getQuizzes() {
   const result = await client.execute('SELECT * FROM quizzes ORDER BY created_at DESC');
   return result.rows as any[];
@@ -188,7 +243,7 @@ export async function getQuizWithQuestions(quizId: string) {
       questionMap.set(row.id, {
         id: row.id,
         text: row.text,
-        type: row.type,
+        type: mapQuestionTypeFromDB(row.type),
         correctAnswerId: row.correct_answer_id,
         sampleAnswer: row.sample_answer,
         options: []
@@ -290,7 +345,7 @@ export async function getQuestions(quizId: string) {
       questionMap.set(row.id, {
         id: row.id,
         text: row.text,
-        type: row.type,
+        type: mapQuestionTypeFromDB(row.type),
         correctAnswerId: row.correct_answer_id,
         sampleAnswer: row.sample_answer,
         options: []
@@ -375,57 +430,51 @@ export async function getQuizResponses(quizId?: string) {
 }
 
 export async function deleteQuiz(quizId: string) {
-  // First, get all questions to delete associated options and responses
-  const questionResult = await client.execute({
-    sql: 'SELECT id FROM questions WHERE quiz_id = ?',
-    args: [quizId]
-  });
-  
-  const questionIds = questionResult.rows.map((row: any) => row.id);
-  
   try {
-    // Start a transaction
-    await client.execute('BEGIN');
-    
-    // Delete responses for this quiz
-    await client.execute({
-      sql: 'DELETE FROM responses WHERE quiz_id = ?',
+    // First, get all questions to delete associated options and responses
+    const questionResult = await client.execute({
+      sql: 'SELECT id FROM questions WHERE quiz_id = ?',
       args: [quizId]
     });
     
-    // Delete options for each question
+    const questionIds = questionResult.rows.map((row: any) => row.id);
+    
+    // Use batch operations for atomic execution
+    const statements = [
+      // Delete responses for this quiz
+      {
+        sql: 'DELETE FROM responses WHERE quiz_id = ?',
+        args: [quizId]
+      }
+    ];
+    
+    // Add delete statements for options for each question
     if (questionIds.length > 0) {
       for (const questionId of questionIds) {
-        await client.execute({
+        statements.push({
           sql: 'DELETE FROM options WHERE question_id = ?',
           args: [questionId]
         });
       }
     }
     
-    // Delete questions
-    await client.execute({
-      sql: 'DELETE FROM questions WHERE quiz_id = ?',
-      args: [quizId]
-    });
+    // Add delete statements for questions and quiz
+    statements.push(
+      {
+        sql: 'DELETE FROM questions WHERE quiz_id = ?',
+        args: [quizId]
+      },
+      {
+        sql: 'DELETE FROM quizzes WHERE id = ?',
+        args: [quizId]
+      }
+    );
     
-    // Finally delete the quiz itself
-    await client.execute({
-      sql: 'DELETE FROM quizzes WHERE id = ?',
-      args: [quizId]
-    });
+    // Execute all statements atomically
+    await client.batch(statements, "write");
     
-    // Commit the transaction
-    await client.execute('COMMIT');
     return true;
   } catch (error) {
-    try {
-      // Only attempt to rollback if we know a transaction is active
-      await client.execute('ROLLBACK');
-    } catch (rollbackError) {
-      // If rollback fails, just log it (we're already in an error handler)
-      console.error('Rollback error:', rollbackError);
-    }
     console.error('Error deleting quiz:', error);
     throw error;
   }

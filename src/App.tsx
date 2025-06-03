@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QuizProvider } from './context/QuizContext';
 import QuizContainer from './components/QuizContainer';
+import QuizResults from './components/QuizResults';
 import AdminLayout from './components/AdminLayout';
 import { BookOpen } from 'lucide-react';
 import { initializeDatabase } from './lib/db';
@@ -36,6 +37,7 @@ function App() {
           <QuizProvider>
             <Routes>
               <Route path="/" element={<QuizContainer />} />
+              <Route path="/quiz-results" element={<QuizResults />} />
               <Route path="/admin/*" element={<AdminLayout />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Quiz, Question, Option } from '../types';
 import LaTeXRenderer from './LaTeXRenderer';
+import LaTeXInput from './LaTeXInput';
+import { Edit, Save, X, CheckCircle } from 'lucide-react';
 
 interface ImageQuizBuilderProps {
   onQuizData: (quizData: Quiz) => void;
 }
 
 const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +17,8 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
   const [extractedQuestions, setExtractedQuestions] = useState<Question[]>([]);
   const [processingStatus, setProcessingStatus] = useState<'idle' | 'processing' | 'complete'>('idle');
   const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -275,11 +277,6 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
       return;
     }
 
-    if (!title.trim()) {
-      setError('Please enter a quiz title.');
-      return;
-    }
-
     setIsProcessing(true);
     setProcessingStatus('processing');
     setError(null);
@@ -327,57 +324,135 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
       return;
     }
 
-    // Create a quiz with the user-provided metadata and the extracted questions
+    // Create a quiz with just the extracted questions
     const quiz: Quiz = {
       id: crypto.randomUUID(),
-      title: title,
-      description: description,
+      title: '', // This will be set by the parent component
+      description: '', // This will be set by the parent component
       questions: extractedQuestions
     };
     
     onQuizData(quiz);
     
-    // Clear the state for the next quiz
+    // Don't clear the state to allow questions to persist across input mode switches
+    // Users can manually clear by removing images if needed
+  };
+
+  const clearExtractedQuestions = () => {
     setImages([]);
     setPreviewImages([]);
     setExtractedQuestions([]);
     setProcessingStatus('idle');
+    setError(null);
+  };
+
+  const startEditingQuestion = (index: number) => {
+    setEditingQuestionIndex(index);
+    setEditingQuestion({ ...extractedQuestions[index] });
+  };
+
+  const cancelEditingQuestion = () => {
+    setEditingQuestionIndex(null);
+    setEditingQuestion(null);
+    setError(null);
+  };
+
+  const saveEditedQuestion = () => {
+    if (editingQuestionIndex !== null && editingQuestion) {
+      if (!validateExtractedQuestion(editingQuestion)) {
+        return;
+      }
+      
+      const newQuestions = [...extractedQuestions];
+      newQuestions[editingQuestionIndex] = editingQuestion;
+      setExtractedQuestions(newQuestions);
+      setEditingQuestionIndex(null);
+      setEditingQuestion(null);
+      setError(null);
+    }
+  };
+
+  const removeExtractedQuestion = (index: number) => {
+    const newQuestions = extractedQuestions.filter((_, i) => i !== index);
+    setExtractedQuestions(newQuestions);
+    
+    // If we're editing the question being removed, cancel editing
+    if (editingQuestionIndex === index) {
+      setEditingQuestionIndex(null);
+      setEditingQuestion(null);
+    }
+    // If we're editing a question after the removed one, adjust the index
+    else if (editingQuestionIndex !== null && editingQuestionIndex > index) {
+      setEditingQuestionIndex(editingQuestionIndex - 1);
+    }
+  };
+
+  const validateExtractedQuestion = (question: Question): boolean => {
+    if (!question.text.trim()) {
+      setError('Question text is required');
+      return false;
+    }
+
+    if (question.type !== 'subjective') {
+      if (!question.correctAnswerId) {
+        setError('Please select a correct answer');
+        return false;
+      }
+
+      if (question.options.some(opt => !opt.text.trim())) {
+        setError('All options must have text');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleEditQuestionChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    if (!editingQuestion) return;
+    
+    if (e.target.name === 'type') {
+      const type = e.target.value as 'multiple-choice' | 'true-false' | 'subjective';
+      setEditingQuestion({
+        ...editingQuestion,
+        type,
+        options: type === 'subjective' ? [] : editingQuestion.options,
+        correctAnswerId: type === 'subjective' ? '' : editingQuestion.correctAnswerId,
+      });
+    } else {
+      setEditingQuestion({ ...editingQuestion, [e.target.name]: e.target.value });
+    }
+  };
+
+  const handleEditOptionChange = (index: number, value: string) => {
+    if (!editingQuestion) return;
+    
+    const newOptions = [...editingQuestion.options];
+    newOptions[index] = { ...newOptions[index], text: value };
+    setEditingQuestion({ ...editingQuestion, options: newOptions });
+  };
+
+  const addEditOption = () => {
+    if (!editingQuestion) return;
+    
+    setEditingQuestion({
+      ...editingQuestion,
+      options: [...editingQuestion.options, { id: crypto.randomUUID(), text: '' }],
+    });
+  };
+
+  const removeEditOption = (index: number) => {
+    if (!editingQuestion) return;
+    
+    const newOptions = editingQuestion.options.filter((_, i) => i !== index);
+    setEditingQuestion({ ...editingQuestion, options: newOptions });
   };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 mb-6 md:mb-8">
-      <h3 className="text-lg md:text-xl font-bold mb-4">Create Quiz from Images</h3>
+      <h3 className="text-lg md:text-xl font-bold mb-4">Add Questions from Images</h3>
       
       <div className="space-y-6">
-        {/* Quiz Metadata */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quiz Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter quiz title"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter quiz description"
-              rows={3}
-            />
-          </div>
-        </div>
-
         {/* AI Provider Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -482,7 +557,7 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
         <div className="flex justify-end">
           <button
             onClick={processImages}
-            disabled={isProcessing || images.length === 0 || !apiKey.trim() || !title.trim()}
+            disabled={isProcessing || images.length === 0 || !apiKey.trim()}
             className="py-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-400 flex items-center gap-2"
           >
             {isProcessing ? (
@@ -515,33 +590,170 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
             <div className="space-y-4">
               {extractedQuestions.map((question, index) => (
                 <div key={question.id} className="p-4 border border-gray-200 rounded-lg">
-                  <h5 className="text-base md:text-lg font-medium text-gray-800 mb-2">
-                    {index + 1}. <LaTeXRenderer content={question.text} />
-                  </h5>
-                  
-                  <p className="text-sm text-gray-600 mb-2">
-                    Type: {question.type}
-                  </p>
-                  
-                  {question.type !== 'subjective' && (
-                    <div className="mt-2">
-                      <p className="text-sm font-medium text-gray-700">Options:</p>
-                      <ul className="mt-1 pl-5 list-disc text-sm text-gray-600">
-                        {question.options.map((option) => (
-                          <li key={option.id} className={option.id === question.correctAnswerId ? 'font-semibold text-green-600' : ''}>
-                            <LaTeXRenderer content={option.text} /> {option.id === question.correctAnswerId && '(Correct)'}
-                          </li>
-                        ))}
-                      </ul>
+                  {editingQuestionIndex === index ? (
+                    // Edit mode
+                    <div className="space-y-4">
+                      <div>
+                        <LaTeXInput
+                          label="Question Text"
+                          name="text"
+                          value={editingQuestion?.text || ''}
+                          onChange={(value) => setEditingQuestion(editingQuestion ? { ...editingQuestion, text: value } : null)}
+                          placeholder="Enter question text (you can use LaTeX for math: $E = mc^2$)"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Question Type
+                        </label>
+                        <select
+                          name="type"
+                          value={editingQuestion?.type}
+                          onChange={handleEditQuestionChange}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="multiple-choice">Multiple Choice</option>
+                          <option value="true-false">True/False</option>
+                          <option value="subjective">Subjective</option>
+                        </select>
+                      </div>
+
+                      {editingQuestion?.type !== 'subjective' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Options
+                          </label>
+                          <div className="space-y-2">
+                            {editingQuestion?.options.map((option, optIndex) => (
+                              <div key={option.id} className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name="correctAnswer"
+                                  checked={editingQuestion.correctAnswerId === option.id}
+                                  onChange={() => setEditingQuestion({ ...editingQuestion, correctAnswerId: option.id })}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                />
+                                <LaTeXInput
+                                  name={`option-${optIndex}`}
+                                  value={option.text}
+                                  onChange={(value) => handleEditOptionChange(optIndex, value)}
+                                  placeholder={`Option ${optIndex + 1} (use LaTeX for math: $x^2$)`}
+                                  className="flex-1"
+                                />
+                                {editingQuestion.options.length > 2 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeEditOption(optIndex)}
+                                    className="p-2 text-red-500 hover:text-red-700"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={addEditOption}
+                              className="mt-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                            >
+                              Add Option
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {editingQuestion?.type === 'subjective' && (
+                        <div>
+                          <LaTeXInput
+                            label="Sample Answer (optional)"
+                            name="sampleAnswer"
+                            value={editingQuestion.sampleAnswer || ''}
+                            onChange={(value) => setEditingQuestion({ ...editingQuestion, sampleAnswer: value })}
+                            placeholder="Enter a sample answer (LaTeX supported for equations)"
+                            multiline={true}
+                            rows={3}
+                          />
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={saveEditedQuestion}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        >
+                          <Save className="w-4 h-4" />
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEditingQuestion}
+                          className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  
-                  {question.type === 'subjective' && question.sampleAnswer && (
-                    <div className="mt-2">
-                      <p className="text-sm font-medium text-gray-700">Sample Answer:</p>
-                      <p className="text-sm text-gray-600 mt-1 italic">
-                        <LaTeXRenderer content={question.sampleAnswer} />
+                  ) : (
+                    // Display mode
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <h5 className="text-base md:text-lg font-medium text-gray-800">
+                          {index + 1}. <LaTeXRenderer content={question.text} />
+                        </h5>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => startEditingQuestion(index)}
+                            className="p-1 text-blue-500 hover:text-blue-700"
+                            title="Edit question"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => removeExtractedQuestion(index)}
+                            className="p-1 text-red-500 hover:text-red-700"
+                            title="Remove question"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-2">
+                        Type: {question.type}
                       </p>
+                      
+                      {question.type !== 'subjective' && (
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-gray-700">Options:</p>
+                          <ul className="mt-1 space-y-1">
+                            {question.options.map((option, optIndex) => (
+                              <li key={option.id} className="flex items-center gap-2 text-sm">
+                                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${
+                                  question.correctAnswerId === option.id 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {String.fromCharCode(65 + optIndex)}
+                                </span>
+                                <LaTeXRenderer content={option.text} className="text-gray-700" />
+                                {question.correctAnswerId === option.id && (
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {question.type === 'subjective' && question.sampleAnswer && (
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-gray-700">Sample Answer:</p>
+                          <p className="text-sm text-gray-600 mt-1 italic">
+                            <LaTeXRenderer content={question.sampleAnswer} />
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -552,7 +764,14 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
               onClick={createQuiz}
               className="w-full mt-4 py-3 px-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
             >
-              Create Quiz with Extracted Questions
+              Add Extracted Questions
+            </button>
+            
+            <button
+              onClick={clearExtractedQuestions}
+              className="w-full mt-2 py-2 px-4 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+            >
+              Clear All Questions
             </button>
           </div>
         )}
@@ -561,13 +780,13 @@ const ImageQuizBuilder: React.FC<ImageQuizBuilderProps> = ({ onQuizData }) => {
         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
           <h4 className="font-medium text-blue-800 mb-2">Instructions</h4>
           <ul className="list-disc pl-5 text-sm text-blue-700 space-y-1">
-            <li>Enter the quiz title and description manually (LaTeX supported for math expressions)</li>
             <li>Select your preferred AI vision model (OpenAI GPT-4V or Gemini Vision)</li>
             <li>Upload images of quiz questions - the AI will automatically detect and convert mathematical expressions to LaTeX</li>
             <li>Each image should contain one complete question with clear, readable text</li>
             <li>The AI will extract question text, options, and identify correct answers using LaTeX for math content</li>
-            <li>Review the extracted questions with rendered LaTeX and make any needed adjustments</li>
-            <li>Click "Create Quiz" when you're satisfied with the results</li>
+            <li>Review and edit the extracted questions with rendered LaTeX - you can modify text, options, or correct answers</li>
+            <li>Use the edit button to make changes or remove button to delete unwanted questions</li>
+            <li>Click "Add Extracted Questions" to add these questions to your current quiz</li>
           </ul>
           <p className="mt-3 text-sm text-blue-700">
             🧮 <strong>Math Content:</strong> Images with equations, formulas, or mathematical symbols will be automatically converted to LaTeX notation for proper rendering.
