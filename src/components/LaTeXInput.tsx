@@ -107,38 +107,38 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 w-full max-w-full overflow-hidden">
       {label && (
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-xs font-medium text-gray-700">
           {label}
         </label>
       )}
       
       {/* LaTeX Toolbar */}
       {shouldShowLatexUI && (
-        <div className="bg-gray-50 p-3 rounded-lg border">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="bg-gray-50 p-2 rounded-md border w-full max-w-full overflow-hidden">
+          <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-medium text-gray-600">Quick Symbols:</span>
             <button
               onClick={() => setShowPreview(!showPreview)}
               className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
             >
-              {showPreview ? 'Hide Preview' : 'Show Preview'}
+              {showPreview ? 'Hide' : 'Show'}
             </button>
           </div>
           
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+          <div className="grid grid-cols-4 md:grid-cols-6 gap-1 w-full">
             {commonSymbols.map((item, index) => (
               <button
                 key={index}
                 onClick={() => insertLatexSymbol(item.symbol)}
-                className="flex flex-col items-center p-2 text-xs bg-white border rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex flex-col items-center p-1 text-xs bg-white border rounded hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[40px] w-full max-w-full overflow-hidden"
                 title={item.label}
               >
-                <div className="mb-1">
+                <div className="mb-0.5 text-xs max-w-full overflow-hidden">
                   {renderLatexContent(item.symbol)}
                 </div>
-                <span className="text-gray-500">{item.label}</span>
+                <span className="text-gray-500 text-xs truncate max-w-full">{item.label}</span>
               </button>
             ))}
           </div>
@@ -146,7 +146,7 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
       )}
 
       {/* Input Area */}
-      <div className="space-y-2">
+      <div className="space-y-2 w-full max-w-full overflow-hidden">
         {multiline ? (
           <textarea
             name={name}
@@ -156,7 +156,7 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
             onBlur={handleBlur}
             placeholder={placeholder}
             rows={rows}
-            className={`w-full p-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none text-sm sm:text-base max-w-full ${className}`}
+            className={`w-full p-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none text-xs max-w-full ${className}`}
           />
         ) : (
           <input
@@ -167,13 +167,13 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className={`w-full p-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm sm:text-base max-w-full ${className}`}
+            className={`w-full p-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-xs max-w-full ${className}`}
           />
         )}
         
         {/* LaTeX Syntax Help */}
         {shouldShowLatexUI && (
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 break-words">
             💡 Tip: Use $...$ for inline math, $$...$$ for display math
           </div>
         )}
@@ -181,15 +181,15 @@ const LaTeXInput: React.FC<LaTeXInputProps> = ({
 
       {/* Live Preview */}
       {showPreview && shouldShowLatexUI && value && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 w-full max-w-full overflow-hidden">
           <div className="flex items-center gap-2 mb-2">
-            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            <span className="text-sm font-medium text-blue-700">Preview:</span>
+            <span className="text-xs font-medium text-blue-700">Preview:</span>
           </div>
-          <div className="prose max-w-none text-gray-900 bg-white p-3 rounded border">
+          <div className="text-xs text-gray-900 bg-white p-2 rounded border max-w-full overflow-hidden break-words overflow-wrap-anywhere">
             {renderLatexContent(value)}
           </div>
         </div>

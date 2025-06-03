@@ -30,10 +30,10 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-3 md:p-4">
       <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 w-full max-w-md">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Welcome to QuizMaster</h2>
-        <p className="text-gray-600 mb-4 md:mb-6">Please enter your name to begin</p>
+        <h2 className="text-lg md:text-2xl font-bold text-gray-800 mb-2">Welcome to QuizMaster</h2>
+        <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">Enter your name to begin</p>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -45,7 +45,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
               placeholder="Enter your name"
               disabled={isLoading}
             />
@@ -55,7 +55,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-400"
+            className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-400 text-sm md:text-base"
           >
             {isLoading ? 'Registering...' : 'Start Quiz'}
           </button>

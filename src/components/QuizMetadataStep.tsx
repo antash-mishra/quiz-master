@@ -43,19 +43,19 @@ const QuizMetadataStep: React.FC<QuizMetadataStepProps> = ({ onComplete, initial
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Create Your Quiz</h2>
-        <p className="text-gray-600">Start by giving your quiz a title and description. You can use LaTeX notation for mathematical expressions.</p>
+    <div className="p-4 md:p-8">
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">Create Your Quiz</h2>
+        <p className="text-sm md:text-base text-gray-600">Give your quiz a title and description. LaTeX notation supported.</p>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+        <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm md:text-base">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
         <div>
           <LaTeXInput
             label="Quiz Title"
@@ -78,11 +78,11 @@ const QuizMetadataStep: React.FC<QuizMetadataStepProps> = ({ onComplete, initial
           />
         </div>
 
-        <div className="flex justify-end pt-6">
+        <div className="flex justify-end pt-4 md:pt-6">
           <button
             type="submit"
             disabled={isLoading}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-400"
+            className="flex items-center gap-2 px-4 md:px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-400 text-sm md:text-base"
           >
             {isLoading ? 'Saving...' : 'Continue to Questions'}
             <ArrowRight className="w-4 h-4" />
@@ -90,13 +90,12 @@ const QuizMetadataStep: React.FC<QuizMetadataStepProps> = ({ onComplete, initial
         </div>
       </form>
 
-      <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-medium text-gray-900 mb-2">💡 LaTeX Tips</h3>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>• Use <code>{'$...$'}</code> for inline math: <code>{'$E = mc^2$'}</code></p>
-          <p>• Use <code>{'$$...$$'}</code> for display math: <code>{'$$\\frac{x}{y}$$'}</code></p>
-          <p>• Common symbols: <code>{'\\alpha'}</code>, <code>{'\\beta'}</code>, <code>{'\\gamma'}</code>, <code>{'\\pi'}</code></p>
-          <p>• Fractions: <code>{'\\frac{numerator}{denominator}'}</code></p>
+      <div className="mt-6 md:mt-8 p-3 md:p-4 bg-gray-50 rounded-lg">
+        <h3 className="font-medium text-gray-900 mb-2 text-sm md:text-base">💡 LaTeX Tips</h3>
+        <div className="text-xs md:text-sm text-gray-600 space-y-1">
+          <p>• Inline math: <code>{'$E = mc^2$'}</code></p>
+          <p>• Display math: <code>{'$$\\frac{x}{y}$$'}</code></p>
+          <p>• Symbols: <code>{'\\alpha, \\beta, \\pi'}</code></p>
         </div>
       </div>
     </div>

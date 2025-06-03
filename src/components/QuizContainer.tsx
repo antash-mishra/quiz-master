@@ -43,8 +43,8 @@ const QuizContainer: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-3 md:p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
           <p className="text-gray-600">Loading quizzes...</p>
         </div>
       </div>
@@ -53,9 +53,9 @@ const QuizContainer: React.FC = () => {
 
   if (quizzes.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <p className="text-gray-600">No quizzes available at the moment.</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-3 md:p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+          <p className="text-gray-600">No quizzes available.</p>
         </div>
       </div>
     );
@@ -68,23 +68,23 @@ const QuizContainer: React.FC = () => {
   // Show quiz selection screen
   if (!selectedQuizId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-3 md:p-4">
         <div className="bg-white rounded-2xl shadow-lg p-4 md:p-8 w-full max-w-2xl">
-          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Welcome, {studentName}!</h2>
-          <p className="text-gray-600 mb-4 md:mb-6">Please select a quiz to begin:</p>
+          <h2 className="text-lg md:text-2xl font-bold text-gray-800 mb-2">Welcome, {studentName}!</h2>
+          <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">Select a quiz to begin:</p>
           
-          <div className="space-y-3 md:space-y-4">
+          <div className="space-y-3">
             {quizzes.map((quiz) => (
               <button
                 key={quiz.id}
                 onClick={() => handleQuizSelect(quiz.id)}
                 className="w-full text-left p-3 md:p-4 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
-                <h3 className="text-base md:text-lg font-medium text-gray-800">
+                <h3 className="text-sm md:text-lg font-medium text-gray-800">
                   <LaTeXRenderer content={quiz.title} />
                 </h3>
                 {quiz.description && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-xs md:text-sm text-gray-600 mt-1">
                     <LaTeXRenderer content={quiz.description} />
                   </p>
                 )}

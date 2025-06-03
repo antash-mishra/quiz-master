@@ -72,7 +72,7 @@ const AdminLayout: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-4 md:py-8">
+    <div className="max-w-6xl mx-auto px-3 md:px-4 py-4 md:py-8">
       {/* Desktop Navigation */}
       <div className="hidden md:flex justify-between items-center mb-8">
         <nav className="flex gap-4">
@@ -109,47 +109,47 @@ const AdminLayout: React.FC = () => {
       </div>
 
       {/* Mobile Navigation */}
-      <div className="md:hidden flex justify-between items-center mb-6">
-        <h1 className="text-xl font-semibold">{location.pathname.includes('create') ? 'Create Quiz' : 'View Responses'}</h1>
+      <div className="md:hidden flex justify-between items-center mb-4">
+        <h1 className="text-lg font-semibold">{location.pathname.includes('create') ? 'Create' : 'Responses'}</h1>
         <button
           onClick={toggleMobileMenu}
           className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
         >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white p-4 rounded-lg shadow-lg mb-6 animate-fade-in">
-          <nav className="flex flex-col gap-2">
+        <div className="md:hidden bg-white p-3 rounded-lg shadow-lg mb-4 animate-fade-in">
+          <nav className="flex flex-col gap-1">
             <button
               onClick={() => handleNavigation('/admin/create')}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                 location.pathname === '/admin/create'
                   ? 'bg-blue-50 text-blue-600'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <PlusCircle className="w-5 h-5" />
+              <PlusCircle className="w-4 h-4" />
               <span>Create Quiz</span>
             </button>
             <button
               onClick={() => handleNavigation('/admin/responses')}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                 location.pathname === '/admin/responses'
                   ? 'bg-blue-50 text-blue-600'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <LineChart className="w-5 h-5" />
-              <span>View Responses</span>
+              <LineChart className="w-4 h-4" />
+              <span>Responses</span>
             </button>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-3 mt-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 mt-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
               <span>Logout</span>
             </button>
           </nav>

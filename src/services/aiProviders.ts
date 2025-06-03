@@ -42,18 +42,22 @@ const SPEECH_PROMPT = `
 Convert this spoken quiz question into a structured format.
 If the transcription has some issues, try to fix them even the scientific formualas, check the capitalization and other details.
 If the content involves mathematics, science, or technical subjects, use LaTeX notation:
-- Use $...$ for inline math (e.g., $x^2$, $\\pi$, $E = mc^2$)
-- Use $$...$$ for display math (e.g., $$\\frac{a}{b}$$, $$\\int_0^1 x dx$$)
 
-Common LaTeX examples:
-- Fractions: $\\frac{numerator}{denominator}$
-- Superscripts: $x^2$, $a^{n+1}$
+For mathematics, science, or technical subjects, use LaTeX notation:
+- Use $...$ for inline math (e.g., $x^2$, $\pi$, $E = mc^2$)
+- Use $$...$$ for display math (e.g., $$\int_0^1 x dx$$)
+
+LaTeX examples:
+- Multiplication: $F = ma$, $P = VI$ (do NOT use fractions for simple multiplication)
+- Actual fractions: $\frac{1}{2}mv^2$, $\frac{V^2}{R}$ (only when division is intended)
+- Superscripts: $x^2$, $E = mc^2$
 - Subscripts: $x_1$, $H_2O$
-- Greek letters: $\\alpha$, $\\beta$, $\\pi$, $\\theta$
-- Math functions: $\\sin$, $\\cos$, $\\log$
-- Integrals: $\\int$, $\\sum$, $\\prod$
-- Square roots: $\\sqrt{x}$
-- Equations: $ax^2 + bx + c = 0$
+- Greek letters: $\alpha$, $\beta$, $\pi$, $\theta$
+- Math functions: $\sin$, $\cos$, $\log$
+- Square roots: $\sqrt{x}$
+
+IMPORTANT: If you see "F=m/a" in transcription, this is likely "F=ma" (Newton's Second Law). 
+Similarly, "V=I/R" is likely "V=IR" (Ohm's Law). Don't create fractions unless the formula genuinely requires division.
 
 Return ONLY valid JSON in this exact format:
 {

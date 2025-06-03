@@ -42,37 +42,37 @@ const QuizBuilder: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-3 md:px-4 py-4 md:py-6">
       {/* Progress Steps */}
-      <div className="mb-8">
+      <div className="mb-6 md:mb-8">
         <div className="flex items-center justify-between mb-4">
           {steps.map((stepItem, index) => (
             <React.Fragment key={stepItem.number}>
               <div className="flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold ${
                   step >= stepItem.number 
                     ? 'bg-blue-600 text-white' 
                     : 'bg-gray-200 text-gray-600'
                 }`}>
                   {step > stepItem.number ? (
-                    <CheckCircle className="w-6 h-6" />
+                    <CheckCircle className="w-4 h-4 md:w-6 md:h-6" />
                   ) : (
                     stepItem.number
                   )}
                 </div>
-                <div className="mt-2 text-center">
-                  <div className={`text-sm font-medium ${
+                <div className="mt-1 md:mt-2 text-center">
+                  <div className={`text-xs md:text-sm font-medium ${
                     step >= stepItem.number ? 'text-blue-600' : 'text-gray-500'
                   }`}>
                     {stepItem.title}
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-400 hidden md:block">
                     {stepItem.description}
                   </div>
                 </div>
               </div>
               {index < steps.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-4 ${
+                <div className={`flex-1 h-0.5 mx-2 md:mx-4 ${
                   step > stepItem.number ? 'bg-blue-600' : 'bg-gray-200'
                 }`} />
               )}
@@ -101,17 +101,17 @@ const QuizBuilder: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <div className="mt-6 flex justify-between">
+      <div className="mt-4 md:mt-6 flex justify-between items-center">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 md:px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm md:text-base"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
         
         {step < 2 && (
-          <div className="text-sm text-gray-500">
+          <div className="text-xs md:text-sm text-gray-500">
             Step {step} of 2
           </div>
         )}

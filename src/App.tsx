@@ -21,19 +21,19 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col">
-        <header className="py-4 bg-white shadow-sm sticky top-0 z-10">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center gap-2">
-              <div className="bg-blue-600 text-white p-2 rounded-lg">
-                <BookOpen className="w-6 h-6" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col w-full max-w-full overflow-x-hidden">
+        <header className="py-3 md:py-4 bg-white shadow-sm sticky top-0 z-10 w-full">
+          <div className="container mx-auto px-3 md:px-4 w-full max-w-full">
+            <div className="flex items-center gap-2 w-full max-w-full">
+              <div className="bg-blue-600 text-white p-1.5 md:p-2 rounded-lg flex-shrink-0">
+                <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
               </div>
-              <h1 className="text-2xl font-bold text-blue-600">QuizMaster</h1>
+              <h1 className="text-lg md:text-2xl font-bold text-blue-600 truncate">QuizMaster</h1>
             </div>
           </div>
         </header>
         
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main className="flex-1 container mx-auto px-3 md:px-4 py-4 md:py-8 w-full max-w-full overflow-x-hidden">
           <QuizProvider>
             <Routes>
               <Route path="/" element={<QuizContainer />} />
@@ -44,8 +44,8 @@ function App() {
           </QuizProvider>
         </main>
         
-        <footer className="py-4 text-center text-gray-500 text-sm">
-          <p>© 2025 QuizMaster. All rights reserved.</p>
+        <footer className="py-3 md:py-4 text-center text-gray-500 text-xs md:text-sm w-full">
+          <p>© 2025 QuizMaster</p>
         </footer>
       </div>
     </BrowserRouter>

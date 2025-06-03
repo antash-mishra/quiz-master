@@ -139,11 +139,11 @@ export default function QuizQuestionsStep({
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6 px-4 sm:px-6">
-      <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-6 sm:p-8 rounded-2xl border border-gray-200">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Add Questions</h2>
+    <div className="w-full max-w-6xl mx-auto space-y-4 px-3 md:px-4 pb-6">
+      <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6 rounded-xl border border-gray-200 mt-4">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">Add Questions</h2>
         
-        <p className="text-gray-600 mb-6 text-sm sm:text-base">
+        <p className="text-gray-600 mb-4 text-sm md:text-base">
           Choose how you'd like to add questions to your quiz. You can use multiple input methods.
         </p>
 
@@ -155,29 +155,29 @@ export default function QuizQuestionsStep({
 
         {/* Success Message */}
         {successMessage && (
-          <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-center space-x-3">
-            <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-            <p className="text-green-700 font-medium text-sm sm:text-base">{successMessage}</p>
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <p className="text-green-700 font-medium text-sm">{successMessage}</p>
       </div>
         )}
 
         {/* Error Message */}
       {error && (
-          <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-start space-x-3">
-            <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-700 font-medium text-sm sm:text-base">{error}</p>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-red-700 font-medium text-sm">{error}</p>
         </div>
       )}
 
         {/* Input Mode Content */}
-        <div className="mb-6">
+        <div className="mb-4">
           {inputMode === 'manual' && (
-            <div className="bg-white p-4 sm:p-6 rounded-2xl border-2 border-gray-200 shadow-sm">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">
+            <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3">
                 {editingQuestionIndex !== null ? 'Edit Question' : 'Create Question Manually'}
               </h3>
               
-              <p className="text-gray-600 mb-6 text-sm sm:text-base">
+              <p className="text-gray-600 mb-4 text-sm md:text-base">
                 {editingQuestionIndex !== null 
                   ? 'Make changes to your question below.'
                   : 'Fill out the form below to create a new question with LaTeX support for mathematical expressions.'
@@ -192,11 +192,11 @@ export default function QuizQuestionsStep({
                 />
               )}
 
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4 sm:space-y-0">
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-3">
                     <button
                     onClick={handleCancel}
-                    className="w-full sm:w-auto px-6 py-3 text-gray-600 hover:text-gray-800 bg-white border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium"
+                    className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-lg transition-all font-medium text-sm"
                     >
                     Cancel
                     </button>
@@ -204,11 +204,11 @@ export default function QuizQuestionsStep({
                   <button
                     onClick={handleSaveOrAdd}
                     disabled={isLoading}
-                    className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                    className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all text-sm"
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         <span>{editingQuestionIndex !== null ? 'Saving...' : 'Adding...'}</span>
                       </>
                     ) : (
@@ -246,13 +246,13 @@ export default function QuizQuestionsStep({
 
       {/* Questions List */}
       {questions.length > 0 && (
-        <div className="bg-white p-4 sm:p-6 rounded-2xl border-2 border-gray-200 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+        <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
             <div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-900">
                 Quiz Questions ({questions.length})
               </h3>
-              <p className="text-gray-600 text-sm sm:text-base">
+              <p className="text-gray-600 text-sm">
                 Review and manage your questions
               </p>
             </div>
@@ -260,11 +260,11 @@ export default function QuizQuestionsStep({
             <button
               onClick={handleFinishQuiz}
               disabled={isLoading || questions.length === 0}
-              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+              className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all text-sm"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Finishing...</span>
                 </>
               ) : (
@@ -273,9 +273,9 @@ export default function QuizQuestionsStep({
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {questions.map((question, index) => (
-              <div key={question.id} className="border border-gray-200 rounded-xl overflow-hidden">
+              <div key={question.id} className="border border-gray-200 rounded-lg overflow-hidden">
                 <QuestionDisplay
                   question={question}
                   index={index}
@@ -290,10 +290,10 @@ export default function QuizQuestionsStep({
       )}
 
       {/* Navigation */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6">
+      <div className="flex flex-col sm:flex-row justify-between gap-2 pt-4 mb-4">
         <button
           onClick={onBack}
-          className="w-full sm:w-auto px-6 py-3 text-gray-600 hover:text-gray-800 bg-white border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium"
+          className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-lg transition-all font-medium text-sm"
         >
           ← Back to Quiz Details
         </button>
@@ -302,11 +302,11 @@ export default function QuizQuestionsStep({
           <button
             onClick={handleFinishQuiz}
             disabled={isLoading}
-            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all text-sm"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Finishing Quiz...</span>
               </>
             ) : (

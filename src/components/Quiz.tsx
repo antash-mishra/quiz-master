@@ -189,19 +189,19 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
   const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{quiz.title}</h1>
+    <div className="min-h-screen bg-gray-50 py-4 md:py-8">
+      <div className="max-w-4xl mx-auto px-3 md:px-4">
+        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-4 md:mb-6">
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">{quiz.title}</h1>
           {quiz.description && (
-            <p className="text-gray-600">{quiz.description}</p>
+            <p className="text-sm md:text-base text-gray-600">{quiz.description}</p>
           )}
           
           {/* Progress Bar */}
-          <div className="mb-6">
-            <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <div className="mb-4 md:mb-6 mt-4">
+            <div className="flex justify-between text-xs md:text-sm text-gray-600 mb-1">
               <span>Question {currentQuestionIndex + 1} of {totalQuestions}</span>
-              <span>{Math.round(progress)}% Complete</span>
+              <span>{Math.round(progress)}%</span>
             </div>
             <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
               <div 
@@ -212,18 +212,18 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium text-gray-500">
-                Question {currentQuestionIndex + 1} of {quiz.questions.length}
+        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-4 md:mb-6">
+          <div className="mb-4 md:mb-6">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <span className="text-xs md:text-sm font-medium text-gray-500">
+                Q{currentQuestionIndex + 1}/{quiz.questions.length}
               </span>
-              <span className="text-sm text-gray-500 capitalize">
+              <span className="text-xs md:text-sm text-gray-500 capitalize">
                 {currentQuestion.type.replace('-', ' ')}
               </span>
             </div>
             
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">
               <LaTeXRenderer content={currentQuestion.text} inline={true} />
             </h2>
           </div>
@@ -236,17 +236,19 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
                   <button
                     key={option.id}
                     onClick={() => handleAnswerSelect(option.id)}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
+                    className={`w-full text-left p-3 md:p-4 rounded-lg border-2 transition-colors ${
                       isSelected
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-center">
-                      <span className="flex-shrink-0 w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-sm font-medium mr-3">
+                      <span className="flex-shrink-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-xs md:text-sm font-medium mr-3">
                         {String.fromCharCode(65 + index)}
                       </span>
-                      <LaTeXRenderer content={option.text} inline={true} />
+                      <div className="text-sm md:text-base">
+                        <LaTeXRenderer content={option.text} inline={true} />
+                      </div>
                     </div>
                   </button>
                 );
@@ -255,7 +257,7 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
           ) : (
             <div>
               <textarea
-                className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none text-sm sm:text-base max-w-full"
+                className="w-full p-3 md:p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none text-sm md:text-base"
                 rows={4}
                 placeholder="Enter your answer here..."
                 value={responses.find(r => r.questionId === currentQuestion.id)?.textAnswer || ''}
@@ -266,11 +268,11 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
         </div>
 
         {/* Quiz Navigation */}
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0">
           <button
             onClick={goToPrevious}
             disabled={isFirstQuestion}
-            className={`px-6 py-3 rounded-xl text-lg font-medium transition-all duration-200 ${
+            className={`px-4 md:px-6 py-3 rounded-xl text-sm md:text-lg font-medium transition-all duration-200 ${
               isFirstQuestion
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 : 'bg-white text-blue-600 hover:bg-gray-50 border border-blue-200'
@@ -283,7 +285,7 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
             <button
               onClick={handleSubmit}
               disabled={responses.length !== quiz.questions.length || isSubmitting}
-              className={`px-8 py-3 rounded-xl text-lg font-medium transition-all duration-200 ${
+              className={`px-6 md:px-8 py-3 rounded-xl text-sm md:text-lg font-medium transition-all duration-200 ${
                 responses.length !== quiz.questions.length || isSubmitting
                   ? 'bg-blue-300 text-white cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -294,7 +296,7 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
           ) : (
             <button
               onClick={goToNext}
-              className="px-8 py-3 rounded-xl text-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200"
+              className="px-6 md:px-8 py-3 rounded-xl text-sm md:text-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200"
             >
               Next
             </button>
