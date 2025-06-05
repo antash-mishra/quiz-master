@@ -37,23 +37,17 @@ export class GoogleAuthService {
   }
 
   async initialize(): Promise<void> {
-    console.log('GoogleAuthService.initialize() called');
-    console.log('Client ID:', this.clientId);
-    console.log('Is already initialized:', this.isInitialized);
-    
     if (this.isInitialized) return;
 
     return new Promise((resolve, reject) => {
       // Check if Google Identity Services is already available
       if (window.google) {
-        console.log('Google API already available');
         this.initializeGoogleSignIn();
         this.isInitialized = true;
         resolve();
         return;
       }
 
-      console.log('Loading Google Identity Services script...');
       // Load Google Identity Services script if not present
       if (!document.querySelector('script[src*="accounts.google.com"]')) {
         const script = document.createElement('script');
@@ -61,24 +55,17 @@ export class GoogleAuthService {
         script.async = true;
         script.defer = true;
         script.onload = () => {
-          console.log('Google script loaded successfully');
           this.waitForGoogleAPI().then(() => {
-            console.log('Google API is ready');
             this.initializeGoogleSignIn();
             this.isInitialized = true;
             resolve();
           }).catch(reject);
         };
-        script.onerror = () => {
-          console.error('Failed to load Google Identity Services script');
-          reject(new Error('Failed to load Google Identity Services'));
-        };
+        script.onerror = () => reject(new Error('Failed to load Google Identity Services'));
         document.head.appendChild(script);
       } else {
-        console.log('Google script already exists, waiting for API...');
         // Script exists but Google API might not be ready yet
         this.waitForGoogleAPI().then(() => {
-          console.log('Google API is ready (existing script)');
           this.initializeGoogleSignIn();
           this.isInitialized = true;
           resolve();
@@ -108,19 +95,15 @@ export class GoogleAuthService {
   }
 
   private initializeGoogleSignIn(): void {
-    console.log('initializeGoogleSignIn() called');
     if (!window.google) {
-      console.error('Google Identity Services not loaded when trying to initialize');
       throw new Error('Google Identity Services not loaded');
     }
 
-    console.log('Calling window.google.accounts.id.initialize with client_id:', this.clientId);
     window.google.accounts.id.initialize({
       client_id: this.clientId,
       auto_select: false,
       cancel_on_tap_outside: false,
     });
-    console.log('Google Sign-In initialized successfully');
   }
 
   renderSignInButton(
@@ -128,35 +111,23 @@ export class GoogleAuthService {
     onSignIn: (user: GoogleUser) => void,
     onError: (error: string) => void
   ): void {
-    console.log('renderSignInButton called');
-    console.log('Element passed:', element);
-    console.log('Is initialized:', this.isInitialized);
-    console.log('Window.google exists:', !!window.google);
-    
     if (!this.isInitialized || !window.google) {
-      console.error('Google Auth Service not initialized when renderSignInButton called');
       throw new Error('Google Auth Service not initialized');
     }
 
-    console.log('Reinitializing Google accounts with callback...');
     window.google.accounts.id.initialize({
       client_id: this.clientId,
       callback: (response: GoogleCredentialResponse) => {
-        console.log('Google Sign-In callback triggered');
         try {
           const user = this.parseJWT(response.credential);
-          console.log('JWT parsed successfully:', user);
           onSignIn(user);
         } catch (error) {
-          console.error('Failed to parse JWT:', error);
           onError('Failed to parse Google Sign-In response');
         }
       },
     });
 
-    console.log('About to call window.google.accounts.id.renderButton');
-    console.log('Target element:', element);
-    console.log('Button config:', {
+    window.google.accounts.id.renderButton(element, {
       theme: 'outline',
       size: 'large',
       width: '100%',
@@ -164,21 +135,6 @@ export class GoogleAuthService {
       shape: 'rectangular',
       logo_alignment: 'left',
     });
-    
-    try {
-      window.google.accounts.id.renderButton(element, {
-        theme: 'outline',
-        size: 'large',
-        width: '100%',
-        text: 'signin_with',
-        shape: 'rectangular',
-        logo_alignment: 'left',
-      });
-      console.log('window.google.accounts.id.renderButton call completed');
-    } catch (error) {
-      console.error('Error during renderButton call:', error);
-      throw error;
-    }
   }
 
   private parseJWT(token: string): GoogleUser {

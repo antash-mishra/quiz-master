@@ -14,11 +14,6 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Debug logging to check environment variables
-    console.log('Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
-    console.log('Environment mode:', import.meta.env.MODE);
-    console.log('All env vars:', import.meta.env);
-    
     initializeGoogleSignIn();
     
     // Cleanup function to ensure proper reinitialization
@@ -30,48 +25,26 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
 
   const initializeGoogleSignIn = async () => {
     try {
-      setIsLoading(true);
+      setIsGoogleLoading(true);
       setError('');
-      
-      // Check if Google Client ID is available
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      if (!clientId || clientId.trim() === '') {
-        setError('Google Client ID not found. Please check environment variables.');
-        setIsGoogleLoading(false);
-        return;
-      }
       
       // Force reinitialization by resetting the service state if needed
       await googleAuthService.initialize();
       
-      console.log('Checking button ref:', googleButtonRef.current);
-      console.log('Button ref exists:', googleButtonRef.current !== null);
-      
       if (googleButtonRef.current) {
-        console.log('Button ref found, clearing existing content');
         // Clear any existing content
         googleButtonRef.current.innerHTML = '';
         
-        console.log('About to render Google Sign-In button');
         googleAuthService.renderSignInButton(
           googleButtonRef.current,
           handleGoogleSignIn,
           handleGoogleError
         );
-        console.log('Google Sign-In button render completed');
-        
-        // Check if button was actually rendered
-        console.log('Button content after render:', googleButtonRef.current.innerHTML);
-        console.log('Button children count:', googleButtonRef.current.children.length);
-      } else {
-        console.error('Button ref is null! Cannot render Google Sign-In button');
-        setError('Failed to find button container. Please refresh the page.');
       }
       setIsGoogleLoading(false);
     } catch (error) {
       console.error('Failed to initialize Google Sign-In:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setError(`Failed to load Google Sign-In: ${errorMessage}. Please refresh the page and try again.`);
+      setError('Failed to load Google Sign-In. Please refresh the page and try again.');
       setIsGoogleLoading(false);
     }
   };
