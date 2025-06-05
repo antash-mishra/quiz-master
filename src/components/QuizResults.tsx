@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getStudentResults } from '../lib/db';
 import LaTeXRenderer from './LaTeXRenderer';
+import QuizSpecificResults from './QuizSpecificResults';
 
 interface QuizResultsProps {
   studentId: string;
@@ -138,7 +139,13 @@ const QuizResultsContent: React.FC<QuizResultsProps> = ({ studentId, studentName
 // Wrapper component that gets data from navigation state
 const QuizResults: React.FC = () => {
   const location = useLocation();
-  const state = location.state as { studentId: string; studentName: string } | null;
+  const navigate = useNavigate();
+  const state = location.state as { 
+    studentId: string; 
+    studentName: string; 
+    quizId?: string; 
+    specificQuiz?: boolean; 
+  } | null;
 
   // Redirect to home if no state is provided
   if (!state || !state.studentId || !state.studentName) {
@@ -154,6 +161,24 @@ const QuizResults: React.FC = () => {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // If specific quiz results are requested, render QuizSpecificResults
+  if (state.specificQuiz && state.quizId) {
+    return (
+      <QuizSpecificResults 
+        studentId={state.studentId}
+        studentName={state.studentName}
+        quizId={state.quizId}
+        isStudentContext={true}
+        onBack={() => navigate('/', { 
+          state: { 
+            studentId: state.studentId, 
+            studentName: state.studentName 
+          } 
+        })}
+      />
     );
   }
 

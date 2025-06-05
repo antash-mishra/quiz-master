@@ -157,8 +157,16 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
         });
       }
       
-      // Navigate back to homepage after completion
-      navigate('/');
+      // Navigate to quiz results page showing only this specific quiz
+      navigate('/quiz-results', {
+        state: {
+          studentId: studentId || 'current-student',
+          studentName: studentName || 'Student',
+          quizId: quizId,
+          specificQuiz: true
+        }
+      });
+
     } catch (err) {
       setError('Failed to submit quiz. Please try again.');
       console.error('Error submitting quiz:', err);
@@ -213,12 +221,13 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
           <div className="flex flex-col gap-3">
             <button
               onClick={() => {
-                // Navigate to specific results page
-                navigate('/quiz-results/specific', {
+                // Navigate to quiz results page with quiz-specific information
+                navigate('/quiz-results', {
                   state: {
                     studentId: studentId,
                     studentName: studentName,
-                    quizId: quizId
+                    quizId: quizId,
+                    specificQuiz: true
                   }
                 });
               }}

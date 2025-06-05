@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import StudentRegistration from './StudentRegistration';
 import Quiz from './Quiz';
 import QuizSpecificResults from './QuizSpecificResults';
@@ -13,6 +14,7 @@ interface Quiz {
 }
 
 const QuizContainer: React.FC = () => {
+  const location = useLocation();
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string>('');
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -20,6 +22,29 @@ const QuizContainer: React.FC = () => {
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
   const [viewingResults, setViewingResults] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Check for student information from navigation state or session storage
+  useEffect(() => {
+    const state = location.state as { studentId: string; studentName: string } | null;
+    
+    if (state && state.studentId && state.studentName) {
+      // Student info passed via navigation state
+      setStudentId(state.studentId);
+      setStudentName(state.studentName);
+      // Store in session storage for persistence
+      sessionStorage.setItem('studentId', state.studentId);
+      sessionStorage.setItem('studentName', state.studentName);
+    } else {
+      // Check session storage for existing student info
+      const storedStudentId = sessionStorage.getItem('studentId');
+      const storedStudentName = sessionStorage.getItem('studentName');
+      
+      if (storedStudentId && storedStudentName) {
+        setStudentId(storedStudentId);
+        setStudentName(storedStudentName);
+      }
+    }
+  }, [location.state]);
 
   useEffect(() => {
     async function loadQuizzes() {
@@ -43,16 +68,20 @@ const QuizContainer: React.FC = () => {
   const handleRegistration = (id: string, name: string) => {
     setStudentId(id);
     setStudentName(name);
+    // Store in session storage for persistence
+    sessionStorage.setItem('studentId', id);
+    sessionStorage.setItem('studentName', name);
   };
 
   const handleSignOut = () => {
-    // Clear local state - with @react-oauth/google, this is sufficient
-    // The Google OAuth session will be handled by the library
+    // Clear local state and session storage
     setStudentId(null);
     setStudentName('');
     setCompletedQuizzes([]);
     setSelectedQuizId(null);
     setViewingResults(false);
+    sessionStorage.removeItem('studentId');
+    sessionStorage.removeItem('studentName');
   };
 
   const handleQuizSelect = (quizId: string) => {
