@@ -132,3 +132,58 @@
     min-height: 44px; /* iOS guideline for touch targets */
   }
 }
+
+/* Enhanced Google OAuth Button Styling */
+.google-oauth-wrapper div[role="button"],
+div[role="button"] {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: all 0.3s ease !important;
+  font-weight: 600 !important;
+  min-height: 52px !important;
+  padding: 14px 20px !important;
+  background-color: white !important;
+  position: relative !important;
+}
+
+div[role="button"]:hover {
+  transform: none !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  background-color: #fafafa !important;
+}
+
+div[role="button"]:active {
+  transform: translateY(1px) !important;
+}
+
+/* Enhanced button text styling */
+div[role="button"] span {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Google logo styling within button */
+div[role="button"] svg {
+  margin-right: 16px !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Add subtle glow effect on hover */
+div[role="button"]:hover::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 14px;
+  z-index: -1;
+  opacity: 0.3;
+  filter: blur(8px);
+  transition: opacity 0.3s ease;
+}

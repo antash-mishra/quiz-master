@@ -3,7 +3,6 @@ import StudentRegistration from './StudentRegistration';
 import Quiz from './Quiz';
 import QuizSpecificResults from './QuizSpecificResults';
 import { getQuizzes, getStudentQuizCompletion } from '../lib/db';
-import { googleAuthService } from '../services/googleAuth';
 import LaTeXRenderer from './LaTeXRenderer';
 import { CheckCircle, Eye, LogOut } from 'lucide-react';
 
@@ -47,7 +46,8 @@ const QuizContainer: React.FC = () => {
   };
 
   const handleSignOut = () => {
-    googleAuthService.signOut();
+    // Clear local state - with @react-oauth/google, this is sufficient
+    // The Google OAuth session will be handled by the library
     setStudentId(null);
     setStudentName('');
     setCompletedQuizzes([]);

@@ -13,6 +13,7 @@
     "@google-cloud/local-auth": "^3.0.1",
     "@google/genai": "^0.10.0",
     "@libsql/client": "^0.5.6",
+    "@react-oauth/google": "^0.12.2",
     "@types/google-one-tap": "^1.2.6",
     "google-auth-library": "^9.15.1",
     "google-one-tap": "^1.0.6",
