@@ -28,10 +28,6 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
       setIsGoogleLoading(true);
       setError('');
       
-      console.log('🔄 Initializing Google Sign-In...');
-      console.log('📍 Current URL:', window.location.href);
-      console.log('🔑 Google Client ID available:', !!import.meta.env.VITE_GOOGLE_CLIENT_ID);
-      
       // Force reinitialization by resetting the service state if needed
       await googleAuthService.initialize();
       
@@ -39,21 +35,16 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
         // Clear any existing content
         googleButtonRef.current.innerHTML = '';
         
-        console.log('🔘 Rendering Google Sign-In button...');
         googleAuthService.renderSignInButton(
           googleButtonRef.current,
           handleGoogleSignIn,
           handleGoogleError
         );
-      } else {
-        console.error('❌ Google button container ref is null');
-        setError('Failed to initialize sign-in button container.');
       }
       setIsGoogleLoading(false);
     } catch (error) {
-      console.error('❌ Failed to initialize Google Sign-In:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setError(`Failed to load Google Sign-In: ${errorMessage}. Please check the console for details.`);
+      console.error('Failed to initialize Google Sign-In:', error);
+      setError('Failed to load Google Sign-In. Please refresh the page and try again.');
       setIsGoogleLoading(false);
     }
   };
@@ -94,10 +85,10 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
       setIsLoading(false);
     }
   };
-
+  
   const handleGoogleError = (error: string) => {
-    console.error('❌ Google Sign-In error:', error);
-    setError(`Google Sign-In failed: ${error}. Please try refreshing the page.`);
+    console.error('Google Sign-In error:', error);
+    setError('Google Sign-In failed. Please refresh the page and try again.');
   };
 
   return (
