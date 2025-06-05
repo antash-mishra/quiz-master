@@ -128,23 +128,35 @@ export class GoogleAuthService {
     onSignIn: (user: GoogleUser) => void,
     onError: (error: string) => void
   ): void {
+    console.log('renderSignInButton called');
+    console.log('Element passed:', element);
+    console.log('Is initialized:', this.isInitialized);
+    console.log('Window.google exists:', !!window.google);
+    
     if (!this.isInitialized || !window.google) {
+      console.error('Google Auth Service not initialized when renderSignInButton called');
       throw new Error('Google Auth Service not initialized');
     }
 
+    console.log('Reinitializing Google accounts with callback...');
     window.google.accounts.id.initialize({
       client_id: this.clientId,
       callback: (response: GoogleCredentialResponse) => {
+        console.log('Google Sign-In callback triggered');
         try {
           const user = this.parseJWT(response.credential);
+          console.log('JWT parsed successfully:', user);
           onSignIn(user);
         } catch (error) {
+          console.error('Failed to parse JWT:', error);
           onError('Failed to parse Google Sign-In response');
         }
       },
     });
 
-    window.google.accounts.id.renderButton(element, {
+    console.log('About to call window.google.accounts.id.renderButton');
+    console.log('Target element:', element);
+    console.log('Button config:', {
       theme: 'outline',
       size: 'large',
       width: '100%',
@@ -152,6 +164,21 @@ export class GoogleAuthService {
       shape: 'rectangular',
       logo_alignment: 'left',
     });
+    
+    try {
+      window.google.accounts.id.renderButton(element, {
+        theme: 'outline',
+        size: 'large',
+        width: '100%',
+        text: 'signin_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+      });
+      console.log('window.google.accounts.id.renderButton call completed');
+    } catch (error) {
+      console.error('Error during renderButton call:', error);
+      throw error;
+    }
   }
 
   private parseJWT(token: string): GoogleUser {

@@ -44,15 +44,28 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
       // Force reinitialization by resetting the service state if needed
       await googleAuthService.initialize();
       
+      console.log('Checking button ref:', googleButtonRef.current);
+      console.log('Button ref exists:', googleButtonRef.current !== null);
+      
       if (googleButtonRef.current) {
+        console.log('Button ref found, clearing existing content');
         // Clear any existing content
         googleButtonRef.current.innerHTML = '';
         
+        console.log('About to render Google Sign-In button');
         googleAuthService.renderSignInButton(
           googleButtonRef.current,
           handleGoogleSignIn,
           handleGoogleError
         );
+        console.log('Google Sign-In button render completed');
+        
+        // Check if button was actually rendered
+        console.log('Button content after render:', googleButtonRef.current.innerHTML);
+        console.log('Button children count:', googleButtonRef.current.children.length);
+      } else {
+        console.error('Button ref is null! Cannot render Google Sign-In button');
+        setError('Failed to find button container. Please refresh the page.');
       }
       setIsGoogleLoading(false);
     } catch (error) {
