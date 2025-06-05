@@ -31,16 +31,22 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegister })
       // Force reinitialization by resetting the service state if needed
       await googleAuthService.initialize();
       
-      if (googleButtonRef.current) {
-        // Clear any existing content
-        googleButtonRef.current.innerHTML = '';
+      googleAuthService.renderSignInButton(
+        googleButtonRef.current as HTMLElement,
+        handleGoogleSignIn,
+        handleGoogleError
+      );
+
+      // if (googleButtonRef.currcent) {
+      //   // Clear any existing content
+      //   googleButtonRef.current.innerHTML = '';
         
-        googleAuthService.renderSignInButton(
-          googleButtonRef.current,
-          handleGoogleSignIn,
-          handleGoogleError
-        );
-      }
+      //   googleAuthService.renderSignInButton(
+      //     googleButtonRef.current,
+      //     handleGoogleSignIn,
+      //     handleGoogleError
+      //   );
+      // }
       setIsGoogleLoading(false);
     } catch (error) {
       console.error('Failed to initialize Google Sign-In:', error);
