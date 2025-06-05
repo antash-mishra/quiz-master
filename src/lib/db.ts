@@ -1,4 +1,5 @@
 import { createClient } from '@libsql/client';
+import { Student } from '../types';
 
 export interface Quiz {
   id: string;
@@ -13,6 +14,7 @@ export interface Question {
   type: string;
   correctAnswerId?: string;
   sampleAnswer?: string;
+  image?: string;
   options: Option[];
 }
 
@@ -47,11 +49,20 @@ export async function initializeDatabase() {
     const tablesExist = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='questions'");
     
     if (tablesExist.rows.length > 0) {
-      // If table exists, check if it has the correct schema
+      // If table exists, check if it has the correct schema including image column
       const tableInfo = await client.execute("PRAGMA table_info(questions)");
       const hasIdColumn = tableInfo.rows.some((row: any) => row.name === 'id');
+      const hasImageColumn = tableInfo.rows.some((row: any) => row.name === 'image');
       
-      // If schema mismatch is detected, backup and recreate tables
+      // If schema mismatch is detected (missing image column), add it
+      if (hasIdColumn && !hasImageColumn) {
+        console.log("Adding image column to questions table...");
+        await client.execute("ALTER TABLE questions ADD COLUMN image TEXT");
+        console.log("Image column added successfully");
+        return;
+      }
+      
+      // If basic schema mismatch is detected, backup and recreate tables
       if (!hasIdColumn) {
         console.log("Schema mismatch detected. Backing up and recreating database tables...");
         
@@ -81,6 +92,9 @@ export async function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS students (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
+      email TEXT UNIQUE,
+      google_id TEXT UNIQUE,
+      profile_picture TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -102,6 +116,7 @@ export async function initializeDatabase() {
       type TEXT NOT NULL,
       correct_answer_id TEXT,
       sample_answer TEXT,
+      image TEXT,
       FOREIGN KEY (quiz_id) REFERENCES quizzes(id)
     )
   `);
@@ -134,12 +149,12 @@ export async function initializeDatabase() {
   console.log("Database initialization complete");
 }
 
-export async function createStudent(name: string) {
+export async function createStudent(studentData: { name: string; email?: string; googleId?: string; profilePicture?: string }) {
   const id = crypto.randomUUID();
   
   await client.execute({
-    sql: 'INSERT INTO students (id, name) VALUES (?, ?)',
-    args: [id, name]
+    sql: 'INSERT INTO students (id, name, email, google_id, profile_picture) VALUES (?, ?, ?, ?, ?)',
+    args: [id, studentData.name, studentData.email || null, studentData.googleId || null, studentData.profilePicture || null]
   });
 
   return id;
@@ -153,8 +168,8 @@ export async function saveQuiz(quiz: Quiz) {
 
   for (const question of quiz.questions) {
     await client.execute({
-      sql: 'INSERT INTO questions (id, quiz_id, text, type, correct_answer_id, sample_answer) VALUES (?, ?, ?, ?, ?, ?)',
-      args: [question.id, quiz.id, question.text, question.type, question.correctAnswerId || null, question.sampleAnswer || null]
+      sql: 'INSERT INTO questions (id, quiz_id, text, type, correct_answer_id, sample_answer, image) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      args: [question.id, quiz.id, question.text, question.type, question.correctAnswerId || null, question.sampleAnswer || null, question.image || null]
     });
 
     for (const option of question.options) {
@@ -186,8 +201,8 @@ export async function updateQuizMetadata(quiz: { id: string; title: string; desc
 
 export async function addQuestionToQuiz(quizId: string, question: Question) {
   await client.execute({
-    sql: 'INSERT INTO questions (id, quiz_id, text, type, correct_answer_id, sample_answer) VALUES (?, ?, ?, ?, ?, ?)',
-    args: [question.id, quizId, question.text, question.type, question.correctAnswerId || null, question.sampleAnswer || null]
+    sql: 'INSERT INTO questions (id, quiz_id, text, type, correct_answer_id, sample_answer, image) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    args: [question.id, quizId, question.text, question.type, question.correctAnswerId || null, question.sampleAnswer || null, question.image || null]
   });
 
   for (const option of question.options) {
@@ -246,6 +261,7 @@ export async function getQuizWithQuestions(quizId: string) {
         type: mapQuestionTypeFromDB(row.type),
         correctAnswerId: row.correct_answer_id,
         sampleAnswer: row.sample_answer,
+        image: row.image,
         options: []
       });
     }
@@ -348,6 +364,7 @@ export async function getQuestions(quizId: string) {
         type: mapQuestionTypeFromDB(row.type),
         correctAnswerId: row.correct_answer_id,
         sampleAnswer: row.sample_answer,
+        image: row.image,
         options: []
       });
     }
@@ -501,6 +518,100 @@ export async function getStudentsByIds(studentIds: string[]) {
   });
   
   return result.rows;
+}
+
+export async function findStudentByGoogleId(googleId: string): Promise<Student | null> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM students WHERE google_id = ?',
+    args: [googleId]
+  });
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0] as any;
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    googleId: row.google_id,
+    profilePicture: row.profile_picture,
+    createdAt: row.created_at
+  };
+}
+
+export async function findStudentByEmail(email: string): Promise<Student | null> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM students WHERE email = ?',
+    args: [email]
+  });
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0] as any;
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    googleId: row.google_id,
+    profilePicture: row.profile_picture,
+    createdAt: row.created_at
+  };
+}
+
+export async function getStudentQuizResults(studentId: string, quizId: string) {
+  const results = await client.execute({
+    sql: `
+      SELECT 
+        q.text as question_text,
+        r.text_answer as student_answer,
+        o.text as selected_option_text,
+        co.text as correct_option_text,
+        r.is_correct,
+        r.created_at as timestamp,
+        qz.title as quiz_title,
+        qz.description as quiz_description
+      FROM responses r
+      JOIN questions q ON q.id = r.question_id
+      JOIN quizzes qz ON qz.id = r.quiz_id
+      LEFT JOIN options o ON o.id = r.selected_option_id
+      LEFT JOIN options co ON co.id = q.correct_answer_id
+      WHERE r.student_id = ? AND r.quiz_id = ?
+      ORDER BY r.created_at
+    `,
+    args: [studentId, quizId]
+  });
+
+  return {
+    quiz: results.rows.length > 0 ? {
+      title: (results.rows[0] as any).quiz_title,
+      description: (results.rows[0] as any).quiz_description
+    } : null,
+    results: results.rows.map((row: any) => ({
+      question_text: row.question_text,
+      student_answer: row.student_answer || row.selected_option_text,
+      correct_answer: row.correct_option_text,
+      is_correct: row.is_correct,
+      timestamp: row.timestamp
+    }))
+  };
+}
+
+export async function hasStudentCompletedQuiz(studentId: string, quizId: string): Promise<boolean> {
+  const result = await client.execute({
+    sql: 'SELECT COUNT(*) as count FROM responses WHERE student_id = ? AND quiz_id = ?',
+    args: [studentId, quizId]
+  });
+  
+  return (result.rows[0] as any).count > 0;
+}
+
+export async function getStudentQuizCompletion(studentId: string): Promise<string[]> {
+  const result = await client.execute({
+    sql: 'SELECT DISTINCT quiz_id FROM responses WHERE student_id = ?',
+    args: [studentId]
+  });
+  
+  return result.rows.map((row: any) => row.quiz_id);
 }
 
 export default client;

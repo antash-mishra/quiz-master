@@ -5,6 +5,7 @@ import ModernSelect from './ModernSelect';
 import ModernInput from './ModernInput';
 import LaTeXInput from '../LaTeXInput';
 import LaTeXRenderer from '../LaTeXRenderer';
+import ImageUpload from './ImageUpload';
 
 interface QuestionEditorProps {
   question: Question;
@@ -98,30 +99,30 @@ export default function QuestionEditor({
     if (!showPreview) return null;
 
     return (
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200 w-full max-w-full overflow-hidden">
-        <h4 className="text-base font-semibold text-gray-900 truncate">Question Review</h4>
-        <div className="flex items-center space-x-1 bg-gray-100 rounded-md p-0.5">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200 w-full">
+        <h4 className="text-sm font-semibold text-gray-700">Question Preview</h4>
+        <div className="flex bg-gray-100 rounded-lg p-1">
           <button
+            type="button"
             onClick={() => setViewMode('edit')}
-            className={`flex items-center space-x-1 px-2 py-1 rounded-sm text-xs font-medium transition-all ${
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
               viewMode === 'edit'
                 ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <Edit className="h-3 w-3" />
-            <span>Edit</span>
+            Edit
           </button>
           <button
+            type="button"
             onClick={() => setViewMode('preview')}
-            className={`flex items-center space-x-1 px-2 py-1 rounded-sm text-xs font-medium transition-all ${
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
               viewMode === 'preview'
                 ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <Eye className="h-3 w-3" />
-            <span>Preview</span>
+            Preview
           </button>
         </div>
       </div>
@@ -141,10 +142,10 @@ export default function QuestionEditor({
   const renderQuestionText = () => {
     if (showPreview && viewMode === 'preview') {
       return (
-        <div className="space-y-2 w-full max-w-full overflow-hidden">
+        <div className="space-y-2 w-full">
           <label className="block text-xs font-medium text-gray-700">Question Text</label>
-          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg min-h-[60px] flex items-start w-full max-w-full overflow-hidden">
-            <div className="w-full max-w-full overflow-hidden">
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg min-h-[60px] flex items-start w-full">
+            <div className="w-full">
               <LaTeXRenderer content={question.text} className="text-sm leading-relaxed break-words overflow-wrap-anywhere" />
             </div>
           </div>
@@ -165,48 +166,62 @@ export default function QuestionEditor({
     );
   };
 
-  const renderOptionsPreview = () => {
-    if (question.type === 'subjective') return null;
+  const renderQuestionImage = () => {
+    if (showPreview && viewMode === 'preview') {
+      if (!question.image) return null;
+      
+      return (
+        <div className="space-y-2 w-full">
+          <label className="block text-xs font-medium text-gray-700">Question Image</label>
+          <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+            <img
+              src={question.image}
+              alt="Question illustration"
+              className="w-full h-auto max-h-64 object-contain bg-white"
+            />
+          </div>
+        </div>
+      );
+    }
 
     return (
-      <div className="space-y-3 w-full max-w-full overflow-hidden">
-        <label className="block text-xs font-medium text-gray-700">
-          Answer Options
-        </label>
-        
+      <ImageUpload
+        value={question.image}
+        onChange={(imageData) => handleQuestionChange('image', imageData)}
+        label="Question Image"
+        maxSizeKB={500}
+      />
+    );
+  };
+
+  const renderOptionsPreview = () => {
+    return (
+      <div className="space-y-3 w-full">
+        <label className="block text-xs font-medium text-gray-700">Answer Options</label>
         <div className="space-y-2">
           {question.options.map((option, index) => (
-            <div 
-              key={option.id} 
-              className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all w-full max-w-full overflow-hidden ${
-                question.correctAnswerId === option.id
-                  ? 'border-green-500 bg-green-50'
+            <div
+              key={option.id}
+              className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all w-full ${
+                option.id === question.correctAnswerId
+                  ? 'border-green-300 bg-green-50'
                   : 'border-gray-200 bg-gray-50'
               }`}
             >
-              <div className={`flex items-center justify-center w-6 h-6 rounded-full border-2 flex-shrink-0 ${
-                question.correctAnswerId === option.id
-                  ? 'border-green-500 bg-green-500 text-white'
-                  : 'border-gray-300 bg-white text-gray-600'
-              }`}>
-                {question.correctAnswerId === option.id ? (
-                  <Check className="h-3 w-3" />
+              <div className="flex items-center justify-center w-6 h-6 flex-shrink-0">
+                {option.id === question.correctAnswerId ? (
+                  <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center">
+                    <Check className="h-3 w-3" />
+                  </div>
                 ) : (
-                  <span className="text-xs font-medium">{String.fromCharCode(65 + index)}</span>
+                  <span className="text-sm font-semibold text-gray-500 bg-white border-2 border-gray-300 rounded-full w-6 h-6 flex items-center justify-center">
+                    {String.fromCharCode(65 + index)}
+                  </span>
                 )}
               </div>
-              
-              <div className="flex-1 min-w-0 overflow-hidden">
+              <div className="flex-1 min-w-0">
                 <LaTeXRenderer content={option.text} inline={true} className="text-xs break-words overflow-wrap-anywhere" />
               </div>
-              
-              {question.correctAnswerId === option.id && (
-                <div className="flex items-center text-green-600 text-xs font-medium">
-                  <Check className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">Correct</span>
-                  <span className="sm:hidden">✓</span>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -222,14 +237,14 @@ export default function QuestionEditor({
     }
 
     return (
-      <div className="space-y-3 w-full max-w-full overflow-hidden">
+      <div className="space-y-3 w-full">
         <label className="block text-xs font-medium text-gray-700">
-          Answer Options <span className="text-gray-500 text-xs">(LaTeX supported)</span>
+          Answer Options {question.type === 'multiple-choice' ? '(Select correct answer)' : ''}
         </label>
         
         <div className="space-y-2">
           {question.options.map((option, index) => (
-            <div key={option.id} className="flex flex-col gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200 w-full max-w-full overflow-hidden">
+            <div key={option.id} className="flex flex-col gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200 w-full">
               <div className="flex items-center space-x-2 w-full">
                 <div className="flex items-center justify-center w-6 h-6 bg-white rounded-md border-2 border-gray-300 flex-shrink-0">
                   <input
@@ -304,23 +319,24 @@ export default function QuestionEditor({
   };
 
   return (
-    <div className={`p-3 border-2 rounded-lg transition-all duration-200 w-full max-w-full overflow-hidden ${
+    <div className={`p-3 border-2 rounded-lg transition-all duration-200 w-full ${
       isEditing 
         ? 'border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md' 
         : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
     }`}>
-      <div className="space-y-4 w-full max-w-full overflow-hidden">
+      <div className="space-y-4 w-full">
         {renderViewModeToggle()}
         
-        <div className="grid grid-cols-1 gap-4 w-full max-w-full overflow-hidden">
+        <div className="grid grid-cols-1 gap-4 w-full">
           {(!showPreview || viewMode === 'edit') && renderQuestionTypeSelector()}
         </div>
         
         {renderQuestionText()}
+        {renderQuestionImage()}
         {renderOptions()}
         
         {error && (
-          <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg flex items-start space-x-2 w-full max-w-full overflow-hidden">
+          <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg flex items-start space-x-2 w-full">
             <div className="flex-shrink-0 w-4 h-4 text-red-600 mt-0.5">
               <HelpCircle className="h-4 w-4" />
             </div>

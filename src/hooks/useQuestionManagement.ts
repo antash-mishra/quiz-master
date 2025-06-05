@@ -134,6 +134,7 @@ export function useQuestionManagement({ quizId }: UseQuestionManagementProps): U
       { id: crypto.randomUUID(), text: '' },
     ],
     correctAnswerId: '',
+    image: undefined,
   });
 
   // Add question to state and database

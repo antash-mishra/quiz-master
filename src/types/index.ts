@@ -12,6 +12,7 @@ export interface Question {
   options: Option[];
   correctAnswerId: string;
   sampleAnswer?: string; // For subjective questions
+  image?: string; // Base64 encoded image data for question diagrams/pictures
 }
 
 export interface Quiz {
@@ -19,6 +20,15 @@ export interface Quiz {
   title: string;
   description: string;
   questions: Question[];
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  email?: string;
+  googleId?: string;
+  profilePicture?: string;
+  createdAt?: string;
 }
 
 export interface QuizState {

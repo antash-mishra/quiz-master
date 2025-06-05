@@ -83,6 +83,19 @@ export default function QuestionDisplay({
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 leading-relaxed break-words">
             <LaTeXRenderer content={question.text} inline={true} />
           </h3>
+
+          {/* Question Image */}
+          {question.image && (
+            <div className="mb-4">
+              <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                <img
+                  src={question.image}
+                  alt="Question illustration"
+                  className="w-full h-auto max-h-48 object-contain bg-white"
+                />
+              </div>
+            </div>
+          )}
         </div>
         
         {showActions && (

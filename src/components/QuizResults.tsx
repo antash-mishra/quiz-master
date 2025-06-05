@@ -97,14 +97,14 @@ const QuizResultsContent: React.FC<QuizResultsProps> = ({ studentId, studentName
                 }`}
               >
                 <h3 className="font-medium text-gray-800 mb-2 md:mb-4 text-sm md:text-base">
-                  Q{index + 1}: <LaTeXRenderer content={result.question_text} />
+                  Q{index + 1}: <LaTeXRenderer content={result.question_text} inline={true} />
                 </h3>
                 
                 <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
                   <p>
                     <span className="text-gray-600">Your answer: </span>
                     <span className={result.is_correct ? 'text-green-600' : 'text-red-600'}>
-                      <LaTeXRenderer content={result.student_answer} />
+                      <LaTeXRenderer content={result.student_answer} inline={true} />
                     </span>
                   </p>
                   
@@ -112,7 +112,7 @@ const QuizResultsContent: React.FC<QuizResultsProps> = ({ studentId, studentName
                     <p>
                       <span className="text-gray-600">Correct: </span>
                       <span className="text-green-600">
-                        <LaTeXRenderer content={result.correct_answer} />
+                        <LaTeXRenderer content={result.correct_answer} inline={true} />
                       </span>
                     </p>
                   )}

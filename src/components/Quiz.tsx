@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Quiz as QuizType } from '../types';
 import LaTeXRenderer from './LaTeXRenderer';
-import { getQuestions, saveResponse } from '../lib/db';
+import { getQuestions, saveResponse, hasStudentCompletedQuiz } from '../lib/db';
+import { CheckCircle, ArrowLeft, Eye } from 'lucide-react';
 
 interface QuestionResponse {
   questionId: string;
@@ -16,9 +17,10 @@ interface QuizProps {
   quizId?: string;
   studentId?: string;
   studentName?: string;
+  onBack?: () => void;
 }
 
-export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, studentId, studentName }) => {
+export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, studentId, studentName, onBack }) => {
   const { quizId: urlQuizId } = useParams<{ quizId: string }>();
   const navigate = useNavigate();
   
@@ -31,10 +33,33 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
   const [loading, setLoading] = useState(!propQuiz);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [checkingCompletion, setCheckingCompletion] = useState(true);
+
+  // Check if quiz is already completed
+  useEffect(() => {
+    const checkCompletion = async () => {
+      if (!quizId || !studentId) {
+        setCheckingCompletion(false);
+        return;
+      }
+      
+      try {
+        const completed = await hasStudentCompletedQuiz(studentId, quizId);
+        setIsCompleted(completed);
+      } catch (err) {
+        console.error('Error checking completion status:', err);
+      } finally {
+        setCheckingCompletion(false);
+      }
+    };
+
+    checkCompletion();
+  }, [quizId, studentId]);
 
   useEffect(() => {
     const loadQuestions = async () => {
-      if (!quizId || propQuiz) {
+      if (!quizId || propQuiz || isCompleted) {
         return;
       }
       
@@ -61,8 +86,10 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
       }
     };
 
-    loadQuestions();
-  }, [quizId, propQuiz]);
+    if (!checkingCompletion && !isCompleted) {
+      loadQuestions();
+    }
+  }, [quizId, propQuiz, isCompleted, checkingCompletion]);
 
   const currentQuestion = quiz?.questions[currentQuestionIndex];
 
@@ -130,13 +157,8 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
         });
       }
       
-      // Navigate to quiz results with student data
-      navigate('/quiz-results', {
-        state: {
-          studentId: studentId || 'current-student',
-          studentName: studentName || 'Student'
-        }
-      });
+      // Navigate back to homepage after completion
+      navigate('/');
     } catch (err) {
       setError('Failed to submit quiz. Please try again.');
       console.error('Error submitting quiz:', err);
@@ -152,6 +174,72 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
   const goToNext = () => {
     setCurrentQuestionIndex(Math.min((quiz?.questions.length || 1) - 1, currentQuestionIndex + 1));
   };
+
+  const handleGoBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate('/');
+    }
+  };
+
+  // Show loading while checking completion
+  if (checkingCompletion) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+          <p className="text-gray-600">Checking quiz status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show completion message if quiz is already completed
+  if (isCompleted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 max-w-md w-full text-center">
+          <div className="mb-6">
+            <CheckCircle className="w-12 h-12 md:w-16 md:h-16 text-green-500 mx-auto mb-3" />
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-2">Quiz Already Completed</h2>
+            <p className="text-sm md:text-base text-gray-600 mb-4">
+              You have already completed this quiz. You cannot take it again.
+            </p>
+            <p className="text-xs md:text-sm text-gray-500">
+              But you can view your results to see how you did!
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                // Navigate to specific results page
+                navigate('/quiz-results/specific', {
+                  state: {
+                    studentId: studentId,
+                    studentName: studentName,
+                    quizId: quizId
+                  }
+                });
+              }}
+              className="flex items-center gap-2 justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Eye className="w-4 h-4" />
+              <span>View My Results</span>
+            </button>
+            
+            <button
+              onClick={handleGoBack}
+              className="flex items-center gap-2 justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Go Back</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -226,6 +314,19 @@ export const Quiz: React.FC<QuizProps> = ({ quiz: propQuiz, quizId: propQuizId, 
             <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">
               <LaTeXRenderer content={currentQuestion.text} inline={true} />
             </h2>
+
+            {/* Question Image */}
+            {currentQuestion.image && (
+              <div className="mb-4 md:mb-6">
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <img
+                    src={currentQuestion.image}
+                    alt="Question illustration"
+                    className="w-full h-auto max-h-80 object-contain bg-white"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'true-false' ? (

@@ -139,161 +139,179 @@ export default function QuizQuestionsStep({
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-4 px-3 md:px-4 pb-6">
-      <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6 rounded-xl border border-gray-200 mt-4">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">Add Questions</h2>
-        
-        <p className="text-gray-600 mb-4 text-sm md:text-base">
-          Choose how you'd like to add questions to your quiz. You can use multiple input methods.
-        </p>
+    <div className="w-full max-w-6xl mx-auto space-y-4 lg:space-y-6 px-3 sm:px-4 lg:px-6 pb-6 lg:pb-8">
+      {/* Header Section */}
+      <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-4 sm:p-6 lg:p-8 rounded-xl lg:rounded-2xl border border-gray-200 mt-4 shadow-sm">
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 lg:mb-3">Add Questions</h2>
+            <p className="text-gray-600 text-sm sm:text-base lg:text-lg leading-relaxed">
+              Choose how you'd like to add questions to your quiz. You can use multiple input methods.
+            </p>
+          </div>
 
-        {/* Input Mode Selector */}
-        <QuizInputModeSelector
-          currentMode={inputMode}
-          onModeChange={setInputMode}
-        />
+          {/* Input Mode Selector */}
+          <QuizInputModeSelector
+            currentMode={inputMode}
+            onModeChange={setInputMode}
+          />
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-            <p className="text-green-700 font-medium text-sm">{successMessage}</p>
-      </div>
-        )}
+          {/* Success Message */}
+          {successMessage && (
+            <div className="p-3 sm:p-4 bg-green-50 border-l-4 border-green-400 rounded-lg shadow-sm animate-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <p className="ml-3 text-green-700 font-medium text-sm sm:text-base">{successMessage}</p>
+              </div>
+            </div>
+          )}
 
-        {/* Error Message */}
-      {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-700 font-medium text-sm">{error}</p>
-        </div>
-      )}
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 sm:p-4 bg-red-50 border-l-4 border-red-400 rounded-lg shadow-sm animate-in slide-in-from-top-2 duration-300">
+              <div className="flex items-start">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="ml-3 text-red-700 font-medium text-sm sm:text-base leading-relaxed">{error}</p>
+              </div>
+            </div>
+          )}
 
-        {/* Input Mode Content */}
-        <div className="mb-4">
-          {inputMode === 'manual' && (
-            <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
-              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3">
-                {editingQuestionIndex !== null ? 'Edit Question' : 'Create Question Manually'}
-              </h3>
-              
-              <p className="text-gray-600 mb-4 text-sm md:text-base">
-                {editingQuestionIndex !== null 
-                  ? 'Make changes to your question below.'
-                  : 'Fill out the form below to create a new question with LaTeX support for mathematical expressions.'
-                }
-              </p>
+          {/* Input Mode Content */}
+          <div className="space-y-4">
+            {inputMode === 'manual' && (
+              <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl lg:rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div className="space-y-4 lg:space-y-6">
+                  <div>
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 mb-2">
+                      {editingQuestionIndex !== null ? 'Edit Question' : 'Create Question Manually'}
+                    </h3>
+                    <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                      {editingQuestionIndex !== null 
+                        ? 'Make changes to your question below.'
+                        : 'Fill out the form below to create a new question with LaTeX support for mathematical expressions.'
+                      }
+                    </p>
+                  </div>
 
-              {getDisplayQuestion() && (
-                <QuestionEditor
-                  question={getDisplayQuestion()!}
-                onChange={handleQuestionChange}
-                  error={error}
-                />
-              )}
+                  {getDisplayQuestion() && (
+                    <div className="space-y-4">
+                      <QuestionEditor
+                        question={getDisplayQuestion()!}
+                        onChange={handleQuestionChange}
+                        error={error}
+                      />
+                    </div>
+                  )}
 
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                    onClick={handleCancel}
-                    className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-lg transition-all font-medium text-sm"
-                    >
-                    Cancel
-                    </button>
+                  {/* Action Buttons */}
+                  <div className="pt-4 lg:pt-6 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                      <button
+                        onClick={handleCancel}
+                        className="w-full sm:w-auto px-4 sm:px-6 py-3 text-gray-600 hover:text-gray-800 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-lg lg:rounded-xl transition-all duration-200 font-medium text-sm sm:text-base focus:ring-2 focus:ring-gray-300 focus:outline-none"
+                      >
+                        Cancel
+                      </button>
 
-                  <button
-                    onClick={handleSaveOrAdd}
-                    disabled={isLoading}
-                    className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all text-sm"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>{editingQuestionIndex !== null ? 'Saving...' : 'Adding...'}</span>
-                      </>
-                    ) : (
-                      <span>{editingQuestionIndex !== null ? 'Save Changes' : 'Add Question'}</span>
-                    )}
-                  </button>
-                </div>
+                      <button
+                        onClick={handleSaveOrAdd}
+                        disabled={isLoading}
+                        className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg lg:rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all duration-200 text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>{editingQuestionIndex !== null ? 'Saving...' : 'Adding...'}</span>
+                          </>
+                        ) : (
+                          <span>{editingQuestionIndex !== null ? 'Save Changes' : 'Add Question'}</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
-          {inputMode === 'image' && (
-            <ImageQuizBuilder
-              onQuestionsExtracted={async (questions: Question[]) => {
-                for (const question of questions) {
-                  await handleAddQuestion(question);
-                }
-                setSuccessMessage(`${questions.length} question${questions.length !== 1 ? 's' : ''} added from images!`);
-              }}
-              isLoading={isLoading}
-            />
-          )}
+            {inputMode === 'image' && (
+              <ImageQuizBuilder
+                onQuestionsExtracted={async (questions: Question[]) => {
+                  for (const question of questions) {
+                    await handleAddQuestion(question);
+                  }
+                  setSuccessMessage(`${questions.length} question${questions.length !== 1 ? 's' : ''} added from images!`);
+                }}
+                isLoading={isLoading}
+              />
+            )}
 
-          {inputMode === 'speech' && (
-            <SpeechQuizBuilder
-              onQuestionAdded={async (question: Question) => {
-                await handleAddQuestion(question);
-                setSuccessMessage('Question added from speech!');
-              }}
-              isLoading={isLoading}
-            />
-          )}
+            {inputMode === 'speech' && (
+              <SpeechQuizBuilder
+                onQuestionAdded={async (question: Question) => {
+                  await handleAddQuestion(question);
+                  setSuccessMessage('Question added from speech!');
+                }}
+                isLoading={isLoading}
+              />
+            )}
+          </div>
         </div>
       </div>
 
       {/* Questions List */}
       {questions.length > 0 && (
-        <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-            <div>
-              <h3 className="text-lg md:text-xl font-semibold text-gray-900">
-                Quiz Questions ({questions.length})
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Review and manage your questions
-              </p>
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl lg:rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <div className="space-y-4 lg:space-y-6">
+            {/* Questions Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">
+                  Quiz Questions ({questions.length})
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Review and manage your questions
+                </p>
+              </div>
+
+              <button
+                onClick={handleFinishQuiz}
+                disabled={isLoading || questions.length === 0}
+                className="w-full lg:w-auto px-4 sm:px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg lg:rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all duration-200 text-sm sm:text-base focus:ring-2 focus:ring-green-500 focus:outline-none"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Finishing...</span>
+                  </>
+                ) : (
+                  <span>Finish Quiz ({questions.length} questions)</span>
+                )}
+              </button>
             </div>
 
-            <button
-              onClick={handleFinishQuiz}
-              disabled={isLoading || questions.length === 0}
-              className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all text-sm"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Finishing...</span>
-                </>
-              ) : (
-                <span>Finish Quiz ({questions.length} questions)</span>
-              )}
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {questions.map((question, index) => (
-              <div key={question.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                <QuestionDisplay
-                  question={question}
-                  index={index}
-                  onEdit={handleQuestionEdit}
-                  onRemove={handleRemoveQuestion}
-                  showActions={true}
-                />
-              </div>
-            ))}
+            {/* Questions Grid */}
+            <div className="space-y-3 lg:space-y-4">
+              {questions.map((question, index) => (
+                <div key={question.id} className="border border-gray-200 rounded-lg lg:rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-200 bg-gray-50">
+                  <QuestionDisplay
+                    question={question}
+                    index={index}
+                    onEdit={handleQuestionEdit}
+                    onRemove={handleRemoveQuestion}
+                    showActions={true}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Navigation */}
-      <div className="flex flex-col sm:flex-row justify-between gap-2 pt-4 mb-4">
+      {/* Navigation Footer */}
+      <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 pt-4 lg:pt-6 pb-4">
         <button
           onClick={onBack}
-          className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-lg transition-all font-medium text-sm"
+          className="w-full sm:w-auto px-4 sm:px-6 py-3 text-gray-600 hover:text-gray-800 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-lg lg:rounded-xl transition-all duration-200 font-medium text-sm sm:text-base focus:ring-2 focus:ring-gray-300 focus:outline-none"
         >
           ← Back to Quiz Details
         </button>
@@ -302,7 +320,7 @@ export default function QuizQuestionsStep({
           <button
             onClick={handleFinishQuiz}
             disabled={isLoading}
-            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all text-sm"
+            className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg lg:rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transition-all duration-200 text-sm sm:text-base focus:ring-2 focus:ring-green-500 focus:outline-none"
           >
             {isLoading ? (
               <>
