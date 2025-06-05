@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QuizProvider } from './context/QuizContext';
 import QuizContainer from './components/QuizContainer';
 import QuizResults from './components/QuizResults';
+import QuizSpecificResults from './components/QuizSpecificResults';
 import AdminLayout from './components/AdminLayout';
 import { BookOpen } from 'lucide-react';
 import { initializeDatabase } from './lib/db';
@@ -21,8 +22,8 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col w-full max-w-full overflow-x-hidden">
-        <header className="py-3 md:py-4 bg-white shadow-sm sticky top-0 z-10 w-full">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 w-full">
+        <header className="py-2 md:py-3 bg-white shadow-sm sticky top-0 z-10 w-full">
           <div className="container mx-auto px-3 md:px-4 w-full max-w-full">
             <div className="flex items-center gap-2 w-full max-w-full">
               <div className="bg-blue-600 text-white p-1.5 md:p-2 rounded-lg flex-shrink-0">
@@ -33,18 +34,19 @@ function App() {
           </div>
         </header>
         
-        <main className="flex-1 container mx-auto px-3 md:px-4 py-4 md:py-8 w-full max-w-full overflow-x-hidden">
+        <main className="container mx-auto px-3 md:px-4 py-2 md:py-4 w-full max-w-full">
           <QuizProvider>
             <Routes>
               <Route path="/" element={<QuizContainer />} />
               <Route path="/quiz-results" element={<QuizResults />} />
+              <Route path="/quiz-results/:quizId" element={<QuizSpecificResults />} />
               <Route path="/admin/*" element={<AdminLayout />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </QuizProvider>
         </main>
         
-        <footer className="py-3 md:py-4 text-center text-gray-500 text-xs md:text-sm w-full">
+        <footer className="py-2 md:py-3 text-center text-gray-500 text-xs md:text-sm w-full">
           <p>© 2025 QuizMaster</p>
         </footer>
       </div>
